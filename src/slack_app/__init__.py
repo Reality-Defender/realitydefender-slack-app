@@ -34,18 +34,18 @@ async def main() -> None:
     setup_logging(Config.LOG_LEVEL)
 
     # Create and start our Slack bot
-    slack_bot: App = App(
+    slack_app: App = App(
         slack_bot_token=Config.SLACK_BOT_TOKEN,
         slack_app_token=Config.SLACK_APP_TOKEN,
     )
 
-    logger.info("Starting Slack bot application...")
+    logger.info("Starting Slack application...")
 
     # Start the long polling.
-    asyncio.create_task(slack_bot.poll_results())
+    asyncio.create_task(slack_app.poll_results())
 
     # Start listening.
-    asyncio.create_task(slack_bot.start())
+    asyncio.create_task(slack_app.start())
 
     # Keep the application running
     while True:

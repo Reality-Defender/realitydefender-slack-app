@@ -1,6 +1,9 @@
 import os
 import logging
 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
     """Configuration management for the Slack bot."""
@@ -8,9 +11,6 @@ class Config:
     # Slack configuration
     SLACK_BOT_TOKEN: str = os.getenv("SLACK_BOT_TOKEN", "")
     SLACK_APP_TOKEN: str = os.getenv("SLACK_APP_TOKEN", "")
-
-    # Reality Defender configuration
-    REALITY_DEFENDER_API_KEY: str = os.getenv("REALITY_DEFENDER_API_KEY", "")
 
     # Application configuration
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -23,7 +23,6 @@ class Config:
         required_vars = [
             ("SLACK_BOT_TOKEN", cls.SLACK_BOT_TOKEN),
             ("SLACK_APP_TOKEN", cls.SLACK_APP_TOKEN),
-            ("REALITY_DEFENDER_API_KEY", cls.REALITY_DEFENDER_API_KEY),
         ]
 
         missing_vars = [var_name for var_name, var_value in required_vars if not var_value]

@@ -50,6 +50,7 @@ class App:
             name="Reality Defender",
             logger=logger,
             token=slack_bot_token,
+
         )
         self.handler = AsyncSocketModeHandler(self.app, app_token=slack_app_token)
 
@@ -63,7 +64,7 @@ class App:
         """Set up Slack event handlers."""
 
         @self.app.command("/analyze")
-        def handle_analyze_command(ack: Any, respond: Any, _command: Any) -> None:
+        async def handle_analyze_command(ack: Any, respond: Any, _command: Any) -> None:
             """Handle /analyze slash command."""
             ack()
 
