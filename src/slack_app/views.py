@@ -1,8 +1,8 @@
-from typing import Any, Dict
+from typing import Any
 
 
-def app_home_default(client: Any, event: Any) -> None:
-    client.views_open(
+async def app_home_default(client: Any, event: Any) -> None:
+    await client.views_open(
         user_id=event["user"],
         # A simple view payload for a modal
         view={
@@ -24,8 +24,8 @@ def app_home_default(client: Any, event: Any) -> None:
     )
 
 
-def app_home_first_boot(client: Any, event: Any) -> None:
-    client.views_open(
+async def app_home_first_boot(client: Any, event: Any) -> None:
+    await client.views_open(
         user_id=event["user"],
         # A simple view payload for a modal
         view={
@@ -45,9 +45,9 @@ def app_home_first_boot(client: Any, event: Any) -> None:
     )
 
 
-def notify_error_user_unavailable(client: Any, shortcut: Dict[str, Any]) -> None:
-    client.views_open(
-        trigger_id=shortcut["trigger_id"],
+async def notify_error_user_unavailable(client: Any, trigger_id: str) -> None:
+    await client.views_open(
+        trigger_id=trigger_id,
         view={
             "type": "modal",
             "title": {"type": "plain_text", "text": "Reality Defender"},
@@ -65,12 +65,12 @@ def notify_error_user_unavailable(client: Any, shortcut: Dict[str, Any]) -> None
     )
 
 
-def notify_acknowledge_analysis_request(
-    client: Any, shortcut: Dict[str, Any], unsupported: bool = False
+async def notify_acknowledge_analysis_request(
+    client: Any, trigger_id: str, unsupported: bool = False
 ) -> None:
     if unsupported:
-        client.views_open(
-            trigger_id=shortcut["trigger_id"],
+        await client.views_open(
+            trigger_id=trigger_id,
             view={
                 "type": "modal",
                 "title": {"type": "plain_text", "text": "Reality Defender"},
@@ -89,8 +89,8 @@ def notify_acknowledge_analysis_request(
         )
     else:
         # Provide the user some basic feedback.
-        client.views_open(
-            trigger_id=shortcut["trigger_id"],
+        await client.views_open(
+            trigger_id=trigger_id,
             view={
                 "type": "modal",
                 "title": {"type": "plain_text", "text": "Reality Defender"},
@@ -119,9 +119,9 @@ def notify_acknowledge_analysis_request(
         )
 
 
-def notify_error_analysis_request(client: Any, shortcut: Dict[str, Any]) -> None:
-    client.views_open(
-        trigger_id=shortcut["trigger_id"],
+async def notify_error_analysis_request(client: Any, trigger_id: str) -> None:
+    await client.views_open(
+        trigger_id=trigger_id,
         # A simple view payload for a modal
         view={
             "type": "modal",

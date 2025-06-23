@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import array
 import asyncio
+import json
 import logging
-from asyncio import Task
-from functools import partial
 from pathlib import Path
 
 import requests
@@ -30,7 +29,6 @@ logger = logging.getLogger(__name__)
 class RequestData(TypedDict):
     user_id: str
     media_id: str
-    message_ts: str
     channel_id: str
     status: str
 
@@ -46,11 +44,11 @@ class App:
             slack_bot_token: Slack Bot User OAuth Token
             slack_app_token: Slack App-Level Token
         """
+        self.bot_token = slack_bot_token
         self.app = AsyncApp(
             name="Reality Defender",
             logger=logger,
-            token=slack_bot_token,
-
+            token=self.bot_token,
         )
         self.handler = AsyncSocketModeHandler(self.app, app_token=slack_app_token)
 
@@ -66,34 +64,42 @@ class App:
         @self.app.command("/analyze")
         async def handle_analyze_command(ack: Any, respond: Any, _command: Any) -> None:
             """Handle /analyze slash command."""
-            ack()
+            await ack()
 
-            respond("Command unavailable")
+            await respond("Command unavailable")
             return
 
         @self.app.event("app_home_opened")
         async def show_home_tab(client: Any, event: Any, _logger: Any) -> None:
-            if event.get("user") in self.active_users:
-                app_home_default(client, event)
-            else:
-                app_home_first_boot(client, event)
+            logger.info(f"Received event: {json.dumps(event, indent=2)}")
 
-        @self.app.command("/configure-rd")
+            if event.get("user") in self.active_users:
+                await app_home_default(client, event)
+            else:
+                await app_home_first_boot(client, event)
+
+        @self.app.command("/setup-rd")
         async def handle_configure_rd_command(
             ack: Any, respond: Any, command: Any
         ) -> None:
             """Handle /configure-rd slash command."""
-            ack()
+            await ack()
+
+            logger.info(f"Received setup-rd command: {json.dumps(command, indent=2)}")
+
             self.active_users[command.get("user_id")] = RealityDefender(
                 {"api_key": command.get("text")}
             )
-            respond("Your user has been registered.")
+            await respond("Your user has been registered.")
             return
 
         @self.app.command("/analysis-status")
         async def handle_status_command(ack: Any, respond: Any, command: Any) -> None:
             """Handle /analysis-status slash command to check analysis status."""
-            ack()
+            await ack()
+            logger.info(
+                f"Received analysis-status command: {json.dumps(command, indent=2)}"
+            )
 
             try:
                 user_id = command.get("user_id")
@@ -108,9 +114,11 @@ class App:
                     ]
 
                     if user_requests:
-                        respond(f"Your active analyses: {', '.join(user_requests)}")
+                        await respond(
+                            f"Your active analyses: {', '.join(user_requests)}"
+                        )
                     else:
-                        respond("You have no active analyses.")
+                        await respond("You have no active analyses.")
                     return
 
                 # Check specific analysis status
@@ -118,59 +126,103 @@ class App:
                     req_data = self.active_requests[request_id]
                     if req_data.get("user_id") == user_id:
                         status = req_data.get("status", "unknown")
-                        respond(f"Analysis `{request_id}` status: {status}")
+                        await respond(f"Analysis `{request_id}` status: {status}")
                     else:
-                        respond(
+                        await respond(
                             "Analysis not found or you don't have permission to view it."
                         )
                 else:
-                    respond(f"Analysis `{request_id}` not found or completed.")
+                    await respond(f"Analysis `{request_id}` not found or completed.")
 
             except Exception as e:
                 logger.error(f"Error handling status command: {e}")
-                respond("❌ An error occurred while checking status.")
+                await respond("❌ An error occurred while checking status.")
 
         @self.app.shortcut("analyze")
         async def handle_analyze_shortcut(ack: Any, shortcut: Any, client: Any) -> None:
-            ack()
+            await ack()
+
+            logger.info(f"Received analyze shortcut: {json.dumps(shortcut, indent=2)}")
+            user_id: str = shortcut.get("user", {}).get("id", "")
+            channel_id: str = shortcut.get("channel", {}).get("id", "")
+            trigger_id: str = shortcut.get("trigger_id", "")
 
             try:
-                user_id: str = shortcut.get("user", {}).get("id")
-                channel_id: str = shortcut.get("channel", {}).get("id")
                 blocks: array.array = shortcut.get("message", {}).get("blocks", [])
+                files: array.array = shortcut.get("message", {}).get("files", [])
 
-                for block in blocks:
-                    if block.get("type") == "image":
-                        filename = self._download_image(block)
-                        rd_client: RealityDefender | None = self.active_users.get(
-                            user_id
-                        )
-                        if not rd_client:
-                            notify_error_user_unavailable(client, shortcut)
-                            return
+                urls: list = []
 
-                        upload_result = await rd_client.upload({"file_path": filename})
-                        self.active_requests[upload_result["request_id"]] = {
-                            "user_id": user_id,
-                            "media_id": upload_result["media_id"],
-                            "message_ts": shortcut["message"]["ts"],
-                            "channel_id": channel_id,
-                            "status": "pending",
-                        }
-                        Path(filename).unlink()
+                urls.extend(
+                    [
+                        block.get("image_url") or block.get("slack_file", {}).get("url")
+                        for block in blocks
+                        if block.get("type") == "image"
+                    ]
+                )
+                urls.extend(
+                    [
+                        file.get("url_private") or file.get("url_private_download", {})
+                        for file in files
+                        if file.get("filetype") == "jpg"
+                    ]
+                )
 
-                        notify_acknowledge_analysis_request(client, shortcut)
-                    else:
-                        notify_acknowledge_analysis_request(
-                            client, shortcut, unsupported=True
-                        )
+                if not urls:
+                    await notify_acknowledge_analysis_request(
+                        client, shortcut, unsupported=True
+                    )
+                    return
+
+                for url in urls:
+                    filename = self._download_media(url)
+                    await self._upload_media(client, user_id, channel_id, trigger_id, filename)
+
+                await notify_acknowledge_analysis_request(client, trigger_id)
 
             except Exception:
+                logger.warning("Error handling analyze shortcut", exc_info=True)
                 # Surely this should be more informative.
-                notify_error_analysis_request(client, shortcut)
+                await notify_error_analysis_request(client, trigger_id)
 
     async def start(self) -> None:
         await self.handler.start_async()
+
+    def _download_media(self, url: str) -> str:
+        # Create a unique filename.
+        filename = f"./_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{url.split('/')[-1]}"
+
+        with (
+            requests.get(
+                url,
+                headers={"Authorization": "Bearer " + self.bot_token},
+                stream=True,
+            ) as r,
+            open(filename, "wb") as f,
+        ):
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        return filename
+
+    async def _upload_media(self, client: Any, user_id: str, channel_id: str, trigger_id: str, filename: str) -> None:
+        """Upload media to Reality Defender."""
+
+        rd_client: RealityDefender | None = self.active_users.get(user_id)
+        if not rd_client:
+            await notify_error_user_unavailable(client, trigger_id)
+            return
+
+        upload_result = await rd_client.upload({"file_path": filename})
+        self.active_requests[upload_result["request_id"]] = {
+            "user_id": user_id,
+            "media_id": upload_result["media_id"],
+            "channel_id": channel_id,
+            "status": "pending",
+        }
+        Path(filename).unlink()
+
+        await notify_acknowledge_analysis_request(client, trigger_id)
 
     async def poll_results(self) -> None:
         """
@@ -185,80 +237,74 @@ class App:
                     )
                     if rd_client:
                         request["status"] = "processing"
-                        complete = partial(
-                            self._notify_analysis_complete, request_id=request_id
-                        )
-                        asyncio.create_task(
-                            rd_client.get_result(request_id)
-                        ).add_done_callback(complete)
+
+                        async def analysis() -> None:
+                            """
+                            Run analysis and wait for completion.
+                            """
+                            while True:
+                                result = await rd_client.get_result(request_id)
+
+                                if result.get("status") == "ANALYZING":
+                                    logger.info(
+                                        f"Processing analysis for {request_id}: {json.dumps(result, indent=2)}"
+                                    )
+                                else:
+                                    break
+
+                            await self._notify_analysis_complete(result, request_id)
+
+                        asyncio.create_task(analysis())
 
             await asyncio.sleep(5)
 
-    def _download_image(self, block: dict) -> str:
-        url = block.get("image_url") or block.get("slack_file", {}).get("url")
-        if not url:
-            raise Exception("Missing image URL")
-
-        # Create a unique filename.
-        filename = f"./_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{url.split('/')[-1]}"
-
-        with (
-            requests.get(
-                url,
-                headers={"Authorization": "Bearer " + self.handler.app_token},
-                stream=True,
-            ) as r,
-            open(filename, "wb") as f,
-        ):
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        return filename
-
-    async def _notify_analysis_complete(self, request_id: str, task: Task) -> None:
+    async def _notify_analysis_complete(self, result: Any, request_id: str) -> None:
         """
         Notify users that analysis is complete.
 
         Args:
+            result: the result of the analysis
             request_id: Analysis ID
-            task: Task object for the analysis
         """
-        result = task.result()
+        logger.info(
+            f"Notifying analysis complete for {request_id}: {json.dumps(result, indent=2)}"
+        )
         try:
-            req_data = self.active_requests.pop(request_id, None)
+            req_data: RequestData | None = self.active_requests.pop(request_id, None)
             if not req_data:
                 return
 
-            channel_id = req_data["channel_id"]
-            user_id = req_data["user_id"]
+            channel_id: str = req_data["channel_id"]
+            user_id: str = req_data["user_id"]
 
             # Format results
-            confidence_score = result.get("confidence_score", 0)
-            is_synthetic = result.get("is_synthetic", False)
-            analysis_type = result.get("analysis_type", "unknown")
+            confidence_score: float = result.get("score") or 0.0
+            status: str = result.get("status", "UNKNOWN")
 
-            # Create result message
-            status_emoji = "⚠️" if is_synthetic else "✅"
-            status_text = (
-                "SYNTHETIC CONTENT DETECTED"
-                if is_synthetic
-                else "Content appears authentic"
-            )
+            # Create a result message
+            if status == "ARTIFICIAL":
+                status_emoji = "⚠️"
+                status_text = "ARTIFICIAL CONTENT DETECTED"
+            elif status == "AUTHENTIC":
+                status_emoji = "✅"
+                status_text = "Content appears authentic"
+            else:
+                status_emoji = "❓"
+                status_text = "Could not determine content authenticity. Please try again later."
 
-            message = f"""
-{status_emoji} **Analysis Complete** - ID: `{request_id}`
+            logger.info(f"Status: {status_emoji} {status_text} {user_id}")
 
+            message = f"""{status_emoji} **Analysis Complete** - ID: `{request_id}`
 <@{user_id}> Your content analysis is ready:
-
 **Result:** {status_text}
 **Confidence:** {confidence_score:.2%}
-**Analysis Type:** {analysis_type}
-
 *Analysis completed at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}*
             """.strip()
+
+            logger.info(f"Sending notification for {request_id}: {message}")
 
             # Send notification
             await self.app.client.chat_postMessage(channel=channel_id, text=message)
 
         except Exception as e:
-            logger.error(f"Error notifying analysis complete for {request_id}: {e}")
+            logger.warning(f"Error notifying analysis complete for {request_id}: {e}", exc_info=True)
