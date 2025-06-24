@@ -47,3 +47,4 @@ dmypy.json
 
 # Lock files shouldn't be committed for libraries.
 *.lock
+src/slack_app/__pycache__/

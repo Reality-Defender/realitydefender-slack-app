@@ -2,13 +2,11 @@ from typing import Any
 
 
 async def app_home_default(client: Any, event: Any) -> None:
-    await client.views_open(
+    await client.views_publish(
         user_id=event["user"],
         # A simple view payload for a modal
         view={
-            "type": "modal",
-            "title": {"type": "plain_text", "text": "Reality Defender"},
-            "close": {"type": "plain_text", "text": "Close"},
+            "type": "home",
             "blocks": [
                 {
                     "type": "section",
@@ -16,7 +14,7 @@ async def app_home_default(client: Any, event: Any) -> None:
                         "type": "mrkdwn",
                         "text": "You have configured the Reality Defender app already. You can use this app to analyze "
                         "certain file types for content authenticity. If for any reason the app does not "
-                        "work as expected, you can always re-add your API key using the /configure-rd command.",
+                        "work as expected, you can always re-add your API key using the /setup-rd command.",
                     },
                 }
             ],
@@ -25,19 +23,17 @@ async def app_home_default(client: Any, event: Any) -> None:
 
 
 async def app_home_first_boot(client: Any, event: Any) -> None:
-    await client.views_open(
+    await client.views_publish(
         user_id=event["user"],
         # A simple view payload for a modal
         view={
-            "type": "modal",
-            "title": {"type": "plain_text", "text": "Reality Defender"},
-            "close": {"type": "plain_text", "text": "Close"},
+            "type": "home",
             "blocks": [
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Use the /configure-rd command to add your Reality Defender API key and start using the app.",
+                        "text": "Use the /setup-rd command to add your Reality Defender API key and start using the app.",
                     },
                 }
             ],

@@ -13,9 +13,7 @@ class Config:
     SLACK_APP_TOKEN: str = os.getenv("SLACK_APP_TOKEN", "")
 
     # Application configuration
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
-    POLL_INTERVAL: int = int(os.getenv("POLL_INTERVAL", "10"))
-    POLL_TIMEOUT: int = int(os.getenv("POLL_TIMEOUT", "300"))
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
 
     @classmethod
     def validate(cls) -> None:
@@ -62,8 +60,8 @@ def setup_logging(log_level: str = "INFO") -> None:
 
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     # Set specific loggers
