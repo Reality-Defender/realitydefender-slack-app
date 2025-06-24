@@ -4,6 +4,7 @@ import array
 import asyncio
 import json
 import logging
+from email import message_from_binary_file
 from pathlib import Path
 
 import requests
@@ -30,6 +31,7 @@ class RequestData(TypedDict):
     user_id: str
     media_id: str
     channel_id: str
+    message_ts: str
     status: str
 
 
@@ -145,6 +147,7 @@ class App:
             logger.info(f"Received analyze shortcut: {json.dumps(shortcut, indent=2)}")
             user_id: str = shortcut.get("user", {}).get("id", "")
             channel_id: str = shortcut.get("channel", {}).get("id", "")
+            message_ts: str = shortcut.get("message_ts", "")
             trigger_id: str = shortcut.get("trigger_id", "")
 
             try:
@@ -164,7 +167,7 @@ class App:
                     [
                         file.get("url_private") or file.get("url_private_download", {})
                         for file in files
-                        if file.get("filetype") == "jpg"
+                        if file.get("filetype") in ["jpg", "jpeg", "png", "mp4"]
                     ]
                 )
 
@@ -176,7 +179,7 @@ class App:
 
                 for url in urls:
                     filename = self._download_media(url)
-                    await self._upload_media(client, user_id, channel_id, trigger_id, filename)
+                    await self._upload_media(client, user_id, channel_id, message_ts, trigger_id, filename)
 
                 await notify_acknowledge_analysis_request(client, trigger_id)
 
@@ -205,7 +208,7 @@ class App:
 
         return filename
 
-    async def _upload_media(self, client: Any, user_id: str, channel_id: str, trigger_id: str, filename: str) -> None:
+    async def _upload_media(self, client: Any, user_id: str, channel_id: str, message_ts: str, trigger_id: str, filename: str) -> None:
         """Upload media to Reality Defender."""
 
         rd_client: RealityDefender | None = self.active_users.get(user_id)
@@ -218,6 +221,7 @@ class App:
             "user_id": user_id,
             "media_id": upload_result["media_id"],
             "channel_id": channel_id,
+            "message_ts": message_ts,
             "status": "pending",
         }
         Path(filename).unlink()
@@ -276,6 +280,7 @@ class App:
 
             channel_id: str = req_data["channel_id"]
             user_id: str = req_data["user_id"]
+            message_ts: str = req_data["message_ts"]
 
             # Format results
             confidence_score: float = result.get("score") or 0.0
@@ -304,7 +309,7 @@ class App:
             logger.info(f"Sending notification for {request_id}: {message}")
 
             # Send notification
-            await self.app.client.chat_postMessage(channel=channel_id, text=message)
+            await self.app.client.chat_postMessage(channel=channel_id, text=message, thread_ts=message_ts)
 
         except Exception as e:
             logger.warning(f"Error notifying analysis complete for {request_id}: {e}", exc_info=True)
