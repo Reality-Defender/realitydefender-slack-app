@@ -13,7 +13,7 @@ class Config:
     SLACK_APP_TOKEN: str = os.getenv("SLACK_APP_TOKEN", "")
 
     # Application configuration
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     @classmethod
     def validate(cls) -> None:
