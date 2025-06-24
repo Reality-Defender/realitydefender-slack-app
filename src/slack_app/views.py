@@ -4,7 +4,6 @@ from typing import Any
 async def app_home_default(client: Any, event: Any) -> None:
     await client.views_publish(
         user_id=event["user"],
-        # A simple view payload for a modal
         view={
             "type": "home",
             "blocks": [
@@ -12,11 +11,33 @@ async def app_home_default(client: Any, event: Any) -> None:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "You have configured the Reality Defender app already. You can use this app to analyze "
-                        "certain file types for content authenticity. If for any reason the app does not "
-                        "work as expected, you can always re-add your API key using the /setup-rd command.",
+                        "text": "🙌 _Reality Defender_ is set up and ready to go! 🙌",
                     },
-                }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "You can use this app to analyze certain files for content authenticity. Go ahead and try it by right clicking on some posted media.",
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "👀 You can view all your pending analysis with `/analysis-status`",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": "❗If the app doesn't seem to work, try running `/setup-rd your-key` again\n❓If problems persist, please contact your administrator.",
+                        }
+                    ],
+                },
             ],
         },
     )
@@ -25,7 +46,6 @@ async def app_home_default(client: Any, event: Any) -> None:
 async def app_home_first_boot(client: Any, event: Any) -> None:
     await client.views_publish(
         user_id=event["user"],
-        # A simple view payload for a modal
         view={
             "type": "home",
             "blocks": [
@@ -33,9 +53,16 @@ async def app_home_first_boot(client: Any, event: Any) -> None:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Use the /setup-rd command to add your Reality Defender API key and start using the app.",
+                        "text": "❗ _Reality Defender_ hasn't been configured for your user yet. ❗",
                     },
-                }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Use the `/setup-rd your-key` command to add your Reality Defender API key and start using the app.",
+                    },
+                },
             ],
         },
     )
@@ -53,9 +80,16 @@ async def notify_error_user_unavailable(client: Any, trigger_id: str) -> None:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "You need to add your Reality Defender API key before you can use this bot.",
+                        "text": "You need to add your Reality Defender API key before you can use this app.",
                     },
-                }
+                },
+                {
+                    "type": "context",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Use the `/setup-rd your-key` command to add your Reality Defender API key and start using the app.",
+                    },
+                },
             ],
         },
     )
