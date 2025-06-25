@@ -71,7 +71,7 @@ class App:
             return
 
         @self.app.event("app_home_opened")
-        async def show_home_tab(client: Any, event: Any, _logger: Any) -> None:
+        async def show_home_tab(client: Any, event: Any) -> None:
             logger.debug(f"Received event: {json.dumps(event, indent=2)}")
 
             if event.get("user") in self.active_users:
@@ -251,7 +251,8 @@ class App:
                             """
                             Run analysis and wait for completion.
                             """
-                            result = await rd_client.get_result(request_id)
+                            result = await rd_client.get_result(request_id, options={"max_attempts": 60})
+
                             await self._notify_analysis_complete(result, request_id)
 
                         asyncio.create_task(analysis())
