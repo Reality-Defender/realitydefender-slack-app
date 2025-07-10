@@ -1,44 +1,35 @@
 import os
 import logging
+from pydantic import BaseModel, Field
+
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-class Config:
+
+class Config(BaseModel):
     """Configuration management for the Slack bot."""
 
     # Slack configuration
-    SLACK_BOT_TOKEN: str = os.getenv("SLACK_BOT_TOKEN", "")
-    SLACK_APP_TOKEN: str = os.getenv("SLACK_APP_TOKEN", "")
+    slack_bot_token: str = Field(
+        alias="SLACK_BOT_TOKEN",
+        description="Token for the Slack bot user.",
+    )
+
+    slack_app_token: str = Field(
+        alias="SLACK_APP_TOKEN",
+        description="Token for the Slack app.",
+    )
 
     # Application configuration
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    log_level: str = Field("INFO", alias="LOG_LEVEL", description="Current log level")
 
-    @classmethod
-    def validate(cls) -> None:
-        """Validate required configuration."""
-        required_vars = [
-            ("SLACK_BOT_TOKEN", cls.SLACK_BOT_TOKEN),
-            ("SLACK_APP_TOKEN", cls.SLACK_APP_TOKEN),
-        ]
 
-        missing_vars = [var_name for var_name, var_value in required_vars if not var_value]
+def load_config(env: dict[str, str] | None = None) -> Config:
+    env = env or dict(os.environ)
 
-        if missing_vars:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-
-    @classmethod
-    def get_log_level(cls) -> int:
-        """Get logging level from configuration."""
-        level_map = {
-            "DEBUG": logging.DEBUG,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "ERROR": logging.ERROR,
-            "CRITICAL": logging.CRITICAL,
-        }
-        return level_map.get(cls.LOG_LEVEL.upper(), logging.INFO)
+    return Config.model_validate(env)
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -61,7 +52,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     logging.basicConfig(
         level=level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # Set specific loggers

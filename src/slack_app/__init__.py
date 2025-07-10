@@ -10,7 +10,7 @@ from typing import Optional
 import logging
 
 from slack_app.app import App
-from slack_app.config import Config, setup_logging
+from slack_app.config import setup_logging, load_config
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +28,15 @@ async def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Validate configuration
-    Config.validate()
+    config = load_config()
 
     # Setup logging
-    setup_logging(Config.LOG_LEVEL)
+    setup_logging(config.log_level)
 
     # Create and start our Slack bot
     slack_app: App = App(
-        slack_bot_token=Config.SLACK_BOT_TOKEN,
-        slack_app_token=Config.SLACK_APP_TOKEN,
+        slack_bot_token=config.slack_bot_token,
+        slack_app_token=config.slack_app_token,
     )
 
     logger.info("Starting Slack application...")

@@ -7,7 +7,7 @@ name = "slack-app"
 version = "0.1.0"
 description = "An app that integrates Slack with the Reality Defender platform."
 authors = [
-    {name = "Reality Defender", email = "support@realitydefender.ai"}
+    { name = "Reality Defender", email = "support@realitydefender.ai" }
 ]
 readme = "README.md"
 license = "Apache-2.0"
@@ -16,20 +16,20 @@ keywords = ["slack", "app", "deepfake", "async"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Communications :: Chat",
-    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 dependencies = [
-    "slack-bolt>=1.23.0",
-    "requests>=2.32.4",
     "aiohttp>=3.9.0",
+    "requests>=2.32.4",
+    "slack-bolt>=1.23.0",
+    "pydantic>=2.11.4,<3.0.0",
     "python-dotenv>=1.0.0",
     "realitydefender>=0.1.2"
 ]
