@@ -45,4 +45,4 @@ dmypy.json
 *.swo
 .DS_Store
 
-src/slack_app/__pycache__/
+src/reality_defender_slack_app/__pycache__/

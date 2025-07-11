@@ -3,7 +3,7 @@ requires = ["uv_build>=0.7.10,<0.8.0"]
 build-backend = "uv_build"
 
 [project]
-name = "slack-app"
+name = "reality-defender-slack-app"
 version = "0.1.0"
 description = "An app that integrates Slack with the Reality Defender platform."
 authors = [
@@ -11,7 +11,7 @@ authors = [
 ]
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 keywords = ["slack", "app", "deepfake", "async"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -19,9 +19,8 @@ classifiers = [
     "License :: OSI Approved :: Apache License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Communications :: Chat",
 ]
 
@@ -39,25 +38,21 @@ dev = [
     "types-requests>=2.32.4",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
     "ruff>=0.11.3",
     "isort>=5.12.0",
-    "flake8>=6.0.0",
     "mypy>=1.0.0",
 ]
 
 test = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
 ]
 
 lint = [
     "ruff>=0.11.3",
     "isort>=5.12.0",
-    "flake8>=6.0.0",
     "mypy>=1.0.0",
 ]
 
@@ -73,7 +68,6 @@ python_classes = "Test*"
 markers = [
     "asyncio: mark a test as an asyncio coroutine"
 ]
-addopts = "--cov=realitydefender --cov-report=xml --cov-report=term"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.isort]
@@ -81,22 +75,8 @@ profile = "black"
 multi_line_output = 3
 line_length = 88
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503", "E501"]
-exclude = [
-    ".git",
-    "__pycache__",
-    "docs/source/conf.py",
-    "old",
-    "build",
-    "dist",
-    ".venv",
-    "venv",
-]
-
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -113,5 +93,5 @@ show_error_codes = true
 allow_redefinition = true
 
 [[tool.mypy.overrides]]
-module = ["slack_sdk.*", "aiohttp.*"]
+module = ["slack_bolt.*", "aiohttp.*"]
 ignore_missing_imports = true
