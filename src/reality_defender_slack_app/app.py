@@ -284,9 +284,9 @@ class App:
             status: str = result.get("status", "UNKNOWN")
 
             # Create a result message
-            if status == "ARTIFICIAL":
+            if status == "MANIPULATED":
                 status_emoji = "⚠️"
-                status_text = "ARTIFICIAL CONTENT DETECTED"
+                status_text = "MANIPULATED CONTENT DETECTED"
             elif status == "AUTHENTIC":
                 status_emoji = "✅"
                 status_text = "Content appears authentic"

@@ -165,7 +165,7 @@ async def test_notify_analysis_complete_artificial(app: App) -> None:
         "media_id": "media456",
     }
 
-    result = {"score": 0.85, "status": "ARTIFICIAL"}
+    result = {"score": 0.85, "status": "MANIPULATED"}
 
     await app._notify_analysis_complete(result, "req123")
 
@@ -177,7 +177,7 @@ async def test_notify_analysis_complete_artificial(app: App) -> None:
     call_args = app.app.client.chat_postMessage.call_args  # type: ignore
     assert call_args[1]["channel"] == "channel456"
     assert call_args[1]["thread_ts"] == "message789"
-    assert "ARTIFICIAL CONTENT DETECTED" in call_args[1]["text"]
+    assert "MANIPULATED CONTENT DETECTED" in call_args[1]["text"]
     assert "85.00%" in call_args[1]["text"]
 
 
@@ -374,7 +374,7 @@ async def test_notify_analysis_complete_formats_message_correctly(app: App) -> N
         "media_id": "media999",
     }
 
-    result = {"score": 0.7234, "status": "ARTIFICIAL"}
+    result = {"score": 0.7234, "status": "MANIPULATED"}
 
     await app._notify_analysis_complete(result, "req999")
 
@@ -386,4 +386,4 @@ async def test_notify_analysis_complete_formats_message_correctly(app: App) -> N
     assert "<@user999>" in message_text
     assert "72.34%" in message_text
     assert "⚠️" in message_text
-    assert "ARTIFICIAL CONTENT DETECTED" in message_text
+    assert "MANIPULATED CONTENT DETECTED" in message_text
