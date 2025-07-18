@@ -46,3 +46,4 @@ dmypy.json
 .DS_Store
 
 src/reality_defender_slack_app/__pycache__/
+tests/__pycache__/
