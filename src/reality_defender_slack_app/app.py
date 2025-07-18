@@ -4,23 +4,21 @@ import array
 import asyncio
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, TypedDict
 
 import requests
-from typing import Dict, Any, TypedDict
-from datetime import datetime
-
-from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
-
 from realitydefender import RealityDefender
+from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
 from slack_bolt.app.async_app import AsyncApp
 
-from slack_app.views import (
+from reality_defender_slack_app.views import (
     app_home_default,
     app_home_first_boot,
-    notify_error_user_unavailable,
     notify_acknowledge_analysis_request,
     notify_error_analysis_request,
+    notify_error_user_unavailable,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,7 +87,7 @@ class App:
             logger.debug(f"Received setup-rd command: {json.dumps(command, indent=2)}")
 
             self.active_users[command.get("user_id")] = RealityDefender(
-                {"api_key": command.get("text")}
+                api_key=command.get("text")
             )
             await respond("Your user has been registered.")
             return
@@ -223,7 +221,7 @@ class App:
         filename: str,
     ) -> None:
         """Upload media to Reality Defender."""
-        upload_result = await rd_client.upload({"file_path": filename})
+        upload_result = await rd_client.upload(file_path=filename)
         self.active_requests[upload_result["request_id"]] = {
             "user_id": user_id,
             "media_id": upload_result["media_id"],
@@ -251,7 +249,9 @@ class App:
                             """
                             Run analysis and wait for completion.
                             """
-                            result = await rd_client.get_result(request_id, options={"max_attempts": 60})
+                            result = await rd_client.get_result(
+                                request_id, max_attempts=60
+                            )
 
                             await self._notify_analysis_complete(result, request_id)
 
@@ -284,9 +284,9 @@ class App:
             status: str = result.get("status", "UNKNOWN")
 
             # Create a result message
-            if status == "ARTIFICIAL":
+            if status == "MANIPULATED":
                 status_emoji = "⚠️"
-                status_text = "ARTIFICIAL CONTENT DETECTED"
+                status_text = "MANIPULATED CONTENT DETECTED"
             elif status == "AUTHENTIC":
                 status_emoji = "✅"
                 status_text = "Content appears authentic"

@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.11-alpine
+FROM ghcr.io/astral-sh/uv:python3.12-alpine
 
 ENV SLACK_BOT_TOKEN=""
 ENV SLACK_APP_TOKEN=""

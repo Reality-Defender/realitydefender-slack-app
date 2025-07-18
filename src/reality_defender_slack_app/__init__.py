@@ -1,16 +1,14 @@
-# main.py
 from __future__ import annotations
 
 import asyncio
+import logging
 import signal
 import sys
 from types import FrameType
 from typing import Optional
 
-import logging
-
-from slack_app.app import App
-from slack_app.config import Config, setup_logging
+from reality_defender_slack_app.app import App
+from reality_defender_slack_app.config import load_config, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +26,15 @@ async def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Validate configuration
-    Config.validate()
+    current_config = load_config()
 
     # Setup logging
-    setup_logging(Config.LOG_LEVEL)
+    setup_logging(current_config.log_level)
 
     # Create and start our Slack bot
     slack_app: App = App(
-        slack_bot_token=Config.SLACK_BOT_TOKEN,
-        slack_app_token=Config.SLACK_APP_TOKEN,
+        slack_bot_token=current_config.slack_bot_token,
+        slack_app_token=current_config.slack_app_token,
     )
 
     logger.info("Starting Slack application...")
