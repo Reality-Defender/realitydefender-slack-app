@@ -1,16 +1,19 @@
-
 # Reality Defender Slack App
 
-A Slack bot that integrates with Reality Defender's deepfake detection platform to analyze media content for authenticity directly within your Slack workspace.
+A Slack bot that integrates with Reality Defender's deepfake detection platform to analyze media content for
+authenticity directly within your Slack workspace.
 
 ## Overview
 
-The Reality Defender Slack App enables teams to quickly verify the authenticity of images, videos, and audio files shared in Slack channels. Using Reality Defender's advanced AI-powered detection technology[[1]](https://www.realitydefender.com/), the app identifies potential deepfakes and manipulated content, helping organizations protect against disinformation and maintain trust in their communications.
+The Reality Defender Slack App enables teams to quickly verify the authenticity of images, videos, and audio files
+shared in Slack channels. Using Reality Defender's advanced AI-powered detection
+technology[[1]](https://www.realitydefender.com/), the app identifies potential deepfakes and manipulated content,
+helping organizations protect against disinformation and maintain trust in their communications.
 
 ## Features
 
 - **Real-time Analysis**: Analyze media files directly from Slack messages using the right-click context menu
-- **Multiple File Formats**: Supports JPG, JPEG, PNG, and MP4 files
+- **Multiple File Formats**: Supports JPG, JPEG, PNG, and MP4 files, among others.
 - **Asynchronous Processing**: Non-blocking analysis that allows continued Slack usage while processing
 
 ## Architecture
