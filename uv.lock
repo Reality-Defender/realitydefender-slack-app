@@ -578,7 +578,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.9.0" },
     { name = "pydantic", specifier = ">=2.11.4,<3.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "realitydefender", specifier = ">=0.1.2" },
+    { name = "realitydefender", specifier = ">=0.1.7" },
     { name = "requests", specifier = ">=2.32.4" },
     { name = "slack-bolt", specifier = ">=1.23.0" },
 ]
@@ -606,16 +606,16 @@ test = [
 
 [[package]]
 name = "realitydefender"
-version = "0.1.5"
+version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "asyncio-atexit" },
     { name = "certifi" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/f5/73a867abd3fcd057dbbf359a3a5eed1fa48a5e06fd5ddf3b7fa88261ff60/realitydefender-0.1.5.tar.gz", hash = "sha256:778f71dd1fa3cd445c0868ac6062f148b1f5d62fed13754d53ba53ddb108becf", size = 12035, upload-time = "2025-06-27T21:32:36.442Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/8f/c5a697ba87a33a16b188ffdcf7a49db66ad63a36c915d9ee3ff223fdd9b5/realitydefender-0.1.7.tar.gz", hash = "sha256:97b4bceb2696c1744fd9421acfd64752a08df8ff23f6cef0b1b124243909b611", size = 14207, upload-time = "2025-07-18T02:53:01.94Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/54/fb9fc2910ca163e4817ec702ab94c3dea3f19199fe6d06b6942d6b58a03b/realitydefender-0.1.5-py3-none-any.whl", hash = "sha256:bc2c13061e242878ca7d364577ea79a94b5de6d1a5dda2eb2b26b882779e1619", size = 17723, upload-time = "2025-06-27T21:32:35.313Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/7d/c76fa208e5e6c7317a4aae2b14db0ee6c281e1d0437ef4db1272d6e9b75a/realitydefender-0.1.7-py3-none-any.whl", hash = "sha256:10e7814bc3e4701351e4513c9b6dd9e0a80a8a21fad18b94a279eb28165b773d", size = 20012, upload-time = "2025-07-18T02:53:01.128Z" },
 ]
 
 [[package]]

@@ -30,7 +30,7 @@ dependencies = [
     "slack-bolt>=1.23.0",
     "pydantic>=2.11.4,<3.0.0",
     "python-dotenv>=1.0.0",
-    "realitydefender>=0.1.2"
+    "realitydefender>=0.1.7"
 ]
 
 [dependency-groups]
