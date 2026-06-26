@@ -12,6 +12,7 @@ helping organizations protect against disinformation and maintain trust in their
 
 ## Features
 
+- **Mention to analyze**: `@mention` the bot with a social media link or an attached file to run a check
 - **Real-time Analysis**: Analyze media files directly from Slack messages using the right-click context menu
 - **Multiple File Formats**: Supports JPG, JPEG, PNG, and MP4 files, among others.
 - **Asynchronous Processing**: Non-blocking analysis that allows continued Slack usage while processing
@@ -98,5 +99,5 @@ definitions, KMS key, and the App Runner IAM instance-role policy.
 ## Basic Slack usage
 
 - Register your Reality Defender API key with the `/setup-rd <your key>` command.
-- Click on `More options` in any message containing supported media types in Slack, then click on `Analyze media`.
-- Type `/analysis-status` to see the status of any ongoing media analysis.
+- Mention the bot with a supported social media link or an attached file, e.g. `@Reality Defender https://x.com/...` or `@Reality Defender` with a file attached.
+- Alternatively, click `More options` on any message containing supported media, then click `Analyze media`.

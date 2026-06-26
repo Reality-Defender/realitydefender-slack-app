@@ -24,13 +24,6 @@
     ],
     "slash_commands": [
       {
-        "command": "/detect",
-        "url": "https://<your-domain>/slack/events",
-        "description": "Analyze a media link for AI manipulation",
-        "usage_hint": "[url]",
-        "should_escape": false
-      },
-      {
         "command": "/setup-rd",
         "url": "https://<your-domain>/slack/events",
         "description": "Register this workspace's Reality Defender API key",
@@ -60,7 +53,7 @@
       "request_url": "https://<your-domain>/slack/events",
       "bot_events": [
         "app_home_opened",
-        "file_shared"
+        "app_mention"
       ]
     },
     "interactivity": {
