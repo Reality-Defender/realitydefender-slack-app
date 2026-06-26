@@ -27,7 +27,7 @@ def test_settings_with_required_fields() -> None:
     assert settings.slack_signing_secret == "signing-secret"
     assert settings.log_level == "INFO"  # default
     assert settings.port == 3000  # default
-    assert settings.allow_shared_rd_key is False  # default
+    assert settings.reality_defender_api_key is None  # default (no shared key)
 
 
 def test_settings_missing_required_raises() -> None:

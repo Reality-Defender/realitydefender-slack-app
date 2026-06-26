@@ -20,14 +20,34 @@ class Settings(BaseSettings):
     slack_client_secret: str
     slack_signing_secret: str
 
-    # Reality Defender: optional shared key for local dev only. In production
-    # each workspace supplies its own key; this is only used when
-    # allow_shared_rd_key is true (see the per-workspace key store, Phase C).
+    # Reality Defender: optional shared key for LOCAL DEV ONLY. It is used as a
+    # fallback only when set; in production leave it unset so each workspace must
+    # supply its own key via /setup-rd and a missing key never silently bills the
+    # operator's account.
     reality_defender_api_key: str | None = None
-    allow_shared_rd_key: bool = False
+
+    # AWS / DynamoDB durable storage. When the table names below are set,
+    # create_app uses DynamoDB-backed stores; otherwise it falls back to
+    # ephemeral in-memory / file stores so local dev needs no AWS.
+    aws_region: str | None = None
+    dynamodb_installations_table: str | None = None
+    dynamodb_oauth_states_table: str | None = None
+    dynamodb_rd_keys_table: str | None = None
+    # KMS key that encrypts RD API keys at the application layer before they are
+    # written to DynamoDB. Required when dynamodb_rd_keys_table is set.
+    rd_key_kms_key_id: str | None = None
 
     log_level: str = "INFO"
     port: int = 3000
+
+    @property
+    def dynamodb_enabled(self) -> bool:
+        """True when all DynamoDB tables are configured (production mode)."""
+        return bool(
+            self.dynamodb_installations_table
+            and self.dynamodb_oauth_states_table
+            and self.dynamodb_rd_keys_table
+        )
 
 
 @lru_cache

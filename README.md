@@ -85,6 +85,16 @@ The application is built with:
 docker-compose up -d
 ```
 
+### Production storage (AWS)
+
+Locally the app uses ephemeral in-memory / file stores and needs no AWS. In
+production it stores Slack installations, OAuth state, and per-workspace Reality
+Defender keys in DynamoDB, with the RD keys encrypted via AWS KMS. Set the
+`DYNAMODB_*_TABLE` and `RD_KEY_KMS_KEY_ID` variables to enable it.
+
+See [docs/aws-deployment.md](docs/aws-deployment.md) for the DynamoDB table
+definitions, KMS key, and the App Runner IAM instance-role policy.
+
 ## Basic Slack usage
 
 - Register your Reality Defender API key with the `/setup-rd <your key>` command.
