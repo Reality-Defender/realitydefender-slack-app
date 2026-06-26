@@ -1,35 +1,39 @@
-import os
+from __future__ import annotations
+
 import logging
-from pydantic import BaseModel, Field
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-from dotenv import load_dotenv
+class Settings(BaseSettings):
+    """Configuration for the Slack bot, loaded from the environment / .env file."""
 
-load_dotenv()
-
-
-class Config(BaseModel):
-    """Configuration management for the Slack bot."""
-
-    # Slack configuration
-    slack_bot_token: str = Field(
-        alias="SLACK_BOT_TOKEN",
-        description="Token for the Slack bot user.",
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
-    slack_app_token: str = Field(
-        alias="SLACK_APP_TOKEN",
-        description="Token for the Slack app.",
-    )
+    # Slack app credentials for multi-workspace OAuth.
+    slack_client_id: str
+    slack_client_secret: str
+    slack_signing_secret: str
 
-    # Application configuration
-    log_level: str = Field("INFO", alias="LOG_LEVEL", description="Current log level")
+    # Reality Defender: optional shared key for local dev only. In production
+    # each workspace supplies its own key; this is only used when
+    # allow_shared_rd_key is true (see the per-workspace key store, Phase C).
+    reality_defender_api_key: str | None = None
+    allow_shared_rd_key: bool = False
+
+    log_level: str = "INFO"
+    port: int = 3000
 
 
-def load_config(env: dict[str, str] | None = None) -> Config:
-    env = env or dict(os.environ)
-
-    return Config.model_validate(env)
+@lru_cache
+def get_settings() -> Settings:
+    """Return a cached Settings instance (env read once per process)."""
+    return Settings()  # type: ignore[call-arg]  # values come from the environment
 
 
 def setup_logging(log_level: str = "INFO") -> None:

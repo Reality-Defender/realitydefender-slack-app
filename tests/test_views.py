@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
+
 from reality_defender_slack_app.views import (
     app_home_default,
     app_home_first_boot,
-    notify_error_user_unavailable,
     notify_acknowledge_analysis_request,
     notify_error_analysis_request,
+    notify_error_user_unavailable,
 )
 
 

@@ -21,7 +21,8 @@ helping organizations protect against disinformation and maintain trust in their
 The application is built with:
 
 - **Python 3.12+**: Modern async/await patterns for concurrent operations
-- **Slack Bolt**: Official Slack SDK for Python with socket mode support
+- **FastAPI + uvicorn**: HTTP server receiving Slack events and the OAuth install flow
+- **Slack Bolt**: Official Slack SDK for Python (async), multi-workspace OAuth
 - **Reality Defender SDK**: Integration with Reality Defender's detection API
 - **Pydantic**: Configuration management and data validation
 - **Docker**: Containerized deployment for easy scaling
@@ -52,12 +53,12 @@ The application is built with:
 3. **Set up environment variables**:
    ```bash
    cp .env.example .env
-   # Edit .env with your Slack tokens
+   # Edit .env with your Slack app credentials (client id/secret, signing secret)
    ```
 
 4. **Run the application**:
    ```bash
-   uv run ./src/reality_defender_slack_app/__init__.py
+   uv run rd-slack-app
    ```
 
 ### Docker Deployment
@@ -70,9 +71,11 @@ The application is built with:
 2. **Run with environment variables**:
    ```bash
    docker run -d \
-     -e SLACK_BOT_TOKEN=your-bot-token \
-     -e SLACK_APP_TOKEN=your-app-token \
+     -e SLACK_CLIENT_ID=your-client-id \
+     -e SLACK_CLIENT_SECRET=your-client-secret \
+     -e SLACK_SIGNING_SECRET=your-signing-secret \
      -e LOG_LEVEL=INFO \
+     -p 3000:3000 \
      reality-defender-slack-app
    ```
 

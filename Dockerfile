@@ -1,12 +1,32 @@
-FROM ghcr.io/astral-sh/uv:python3.12-alpine
+# syntax=docker/dockerfile:1
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-ENV SLACK_BOT_TOKEN=""
-ENV SLACK_APP_TOKEN=""
+# Run as a non-root user in the final image.
+RUN groupadd --system --gid 999 nonroot \
+ && useradd --system --gid 999 --uid 999 --create-home nonroot
 
-ADD . /app
+ENV PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /app
-RUN uv sync --locked
 
-# Run the application
-CMD ["uv", "run", "./src/slack_app/__init__.py"]
+# Install dependencies in their own cached layer, before app code.
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-install-project --no-dev
+
+# Copy the project and install the rd-slack-app console script.
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
+
+# Writable dir for the file-based OAuth stores (replaced by DynamoDB later).
+RUN mkdir -p /app/data && chown -R nonroot:nonroot /app/data
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+EXPOSE 3000
+USER nonroot
+CMD ["rd-slack-app"]
