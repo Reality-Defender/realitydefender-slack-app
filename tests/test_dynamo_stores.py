@@ -87,6 +87,16 @@ async def test_rd_key_store_round_trip(aws: None) -> None:
 
 
 @pytest.mark.asyncio
+async def test_rd_key_store_delete(aws: None) -> None:
+    table = _make_keys_table()
+    store = DynamoDBRDKeyStore(table, _cipher())
+    await store.set("T1", "rd-key-1")
+
+    await store.delete("T1")
+    assert await store.get("T1") is None
+
+
+@pytest.mark.asyncio
 async def test_rd_key_store_encrypts_at_rest(aws: None) -> None:
     table = _make_keys_table()
     store = DynamoDBRDKeyStore(table, _cipher())

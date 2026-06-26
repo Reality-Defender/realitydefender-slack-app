@@ -25,6 +25,17 @@ async def test_in_memory_store_get_set() -> None:
 
 
 @pytest.mark.asyncio
+async def test_in_memory_store_delete() -> None:
+    store = InMemoryRDKeyStore()
+    await store.set("T1", "rd-key-1")
+
+    await store.delete("T1")
+    assert await store.get("T1") is None
+    # Deleting an unknown team is a no-op, not an error.
+    await store.delete("T2")
+
+
+@pytest.mark.asyncio
 async def test_resolve_prefers_workspace_key() -> None:
     store = InMemoryRDKeyStore()
     await store.set("T1", "workspace-key")

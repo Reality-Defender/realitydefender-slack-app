@@ -53,7 +53,9 @@
       "request_url": "https://<your-domain>/slack/events",
       "bot_events": [
         "app_home_opened",
-        "app_mention"
+        "app_mention",
+        "app_uninstalled",
+        "tokens_revoked"
       ]
     },
     "interactivity": {

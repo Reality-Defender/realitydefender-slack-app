@@ -22,6 +22,8 @@ class RDKeyStore(Protocol):
 
     async def set(self, team_id: str, api_key: str) -> None: ...
 
+    async def delete(self, team_id: str) -> None: ...
+
 
 class InMemoryRDKeyStore:
     """Ephemeral per-workspace key store for local dev.
@@ -38,6 +40,9 @@ class InMemoryRDKeyStore:
 
     async def set(self, team_id: str, api_key: str) -> None:
         self._keys[team_id] = api_key
+
+    async def delete(self, team_id: str) -> None:
+        self._keys.pop(team_id, None)
 
 
 class DynamoDBRDKeyStore:
@@ -68,6 +73,9 @@ class DynamoDBRDKeyStore:
             self._table.put_item,
             Item={"team_id": team_id, "encrypted_key": encrypted},
         )
+
+    async def delete(self, team_id: str) -> None:
+        await asyncio.to_thread(self._table.delete_item, Key={"team_id": team_id})
 
 
 async def resolve_api_key(

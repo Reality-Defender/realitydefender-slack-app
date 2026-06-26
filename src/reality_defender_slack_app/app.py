@@ -39,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings=settings,
         rd_client=RDClient(),
         key_store=storage.key_store,
+        installation_store=storage.installation_store,
     )
 
     oauth_settings = AsyncOAuthSettings(
