@@ -38,7 +38,6 @@ def register_command_handlers(app: AsyncApp, deps: Deps) -> None:
         url = command.get("text", "").strip()
         channel_id = command["channel_id"]
         team_id = context.get("team_id")
-        user_id = command.get("user_id")
 
         if not url:
             await respond("Please provide a URL to analyze: `/detect <url>`")
@@ -66,10 +65,7 @@ def register_command_handlers(app: AsyncApp, deps: Deps) -> None:
             analyze_url_and_post(
                 client=client,
                 rd_client=deps.rd_client,
-                tracker=deps.tracker,
                 api_key=api_key,
-                team_id=team_id or "",
-                user_id=user_id or "",
                 channel_id=channel_id,
                 thread_ts=msg["ts"],
                 url=url,
@@ -92,18 +88,3 @@ def register_command_handlers(app: AsyncApp, deps: Deps) -> None:
 
         await deps.key_store.set(team_id, api_key)
         await respond(":white_check_mark: Reality Defender API key saved for this workspace.")
-
-    @app.command("/analysis-status")
-    async def handle_status(ack: Any, command: Any, context: Any, respond: Any) -> None:
-        await ack()
-
-        team_id = context.get("team_id") or ""
-        user_id = command.get("user_id") or ""
-        records = deps.tracker.for_user(team_id, user_id)
-
-        if not records:
-            await respond("You have no analyses in progress.")
-            return
-
-        lines = [f"• `{r.label}` — {r.status}" for r in records]
-        await respond("Your analyses:\n" + "\n".join(lines))

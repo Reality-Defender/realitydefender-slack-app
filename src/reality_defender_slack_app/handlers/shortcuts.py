@@ -46,7 +46,6 @@ def register_shortcut_handlers(app: AsyncApp, deps: Deps) -> None:
         await ack()
 
         team_id = context.get("team_id")
-        user_id = shortcut.get("user", {}).get("id", "")
         channel_id = shortcut.get("channel", {}).get("id", "")
         message_ts = shortcut.get("message_ts", "")
         trigger_id = shortcut.get("trigger_id", "")
@@ -70,8 +69,6 @@ def register_shortcut_handlers(app: AsyncApp, deps: Deps) -> None:
                     deps,
                     client,
                     api_key=api_key,
-                    team_id=team_id or "",
-                    user_id=user_id,
                     channel_id=channel_id,
                     thread_ts=message_ts,
                     url=url,
@@ -86,8 +83,6 @@ async def _download_and_analyze(
     client: Any,
     *,
     api_key: str,
-    team_id: str,
-    user_id: str,
     channel_id: str,
     thread_ts: str,
     url: str,
@@ -103,10 +98,7 @@ async def _download_and_analyze(
     await analyze_file_and_post(
         client=client,
         rd_client=deps.rd_client,
-        tracker=deps.tracker,
         api_key=api_key,
-        team_id=team_id,
-        user_id=user_id,
         channel_id=channel_id,
         thread_ts=thread_ts,
         content=content,

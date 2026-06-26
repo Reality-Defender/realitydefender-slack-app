@@ -24,7 +24,7 @@ async def test_app_home_default() -> None:
 
     assert call_args[1]["user_id"] == "U123456"
     assert call_args[1]["view"]["type"] == "home"
-    assert len(call_args[1]["view"]["blocks"]) == 5
+    assert len(call_args[1]["view"]["blocks"]) == 4
 
 
 @pytest.mark.asyncio
@@ -41,8 +41,7 @@ async def test_app_home_default_content() -> None:
     # Check that the blocks contain expected content
     assert "Reality Defender" in blocks[0]["text"]["text"]
     assert "analyze certain files" in blocks[1]["text"]["text"]
-    assert "/analysis-status" in blocks[2]["text"]["text"]
-    assert blocks[3]["type"] == "divider"
+    assert blocks[2]["type"] == "divider"
 
 
 @pytest.mark.asyncio

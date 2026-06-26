@@ -31,12 +31,6 @@
         "should_escape": false
       },
       {
-        "command": "/analysis-status",
-        "url": "https://<your-domain>/slack/events",
-        "description": "Returns the status of ongoing tasks",
-        "should_escape": false
-      },
-      {
         "command": "/setup-rd",
         "url": "https://<your-domain>/slack/events",
         "description": "Register this workspace's Reality Defender API key",

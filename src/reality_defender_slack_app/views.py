@@ -21,13 +21,6 @@ async def app_home_default(client: Any, event: Any) -> None:
                         "text": "You can use this app to analyze certain files for content authenticity. Go ahead and try it by right clicking on some posted media.",
                     },
                 },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "👀 You can view all your pending analysis with `/analysis-status`",
-                    },
-                },
                 {"type": "divider"},
                 {
                     "type": "context",

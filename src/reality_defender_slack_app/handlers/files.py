@@ -31,7 +31,6 @@ def register_file_handlers(app: AsyncApp, deps: Deps) -> None:
                 context,
                 file_id=event.get("file_id"),
                 channel_id=event.get("channel_id"),
-                user_id=event.get("user_id", ""),
             )
         )
 
@@ -43,7 +42,6 @@ async def _process_file(
     *,
     file_id: str,
     channel_id: str,
-    user_id: str,
 ) -> None:
     try:
         file_info = await client.files_info(file=file_id)
@@ -90,10 +88,7 @@ async def _process_file(
         await analyze_file_and_post(
             client=client,
             rd_client=deps.rd_client,
-            tracker=deps.tracker,
             api_key=api_key,
-            team_id=team_id or "",
-            user_id=user_id,
             channel_id=channel_id,
             thread_ts=thread_ts,
             content=content,

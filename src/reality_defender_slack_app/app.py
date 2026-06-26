@@ -14,7 +14,6 @@ from reality_defender_slack_app.deps import Deps
 from reality_defender_slack_app.handlers import register_handlers
 from reality_defender_slack_app.services.keys import InMemoryRDKeyStore
 from reality_defender_slack_app.services.reality_defender import RDClient
-from reality_defender_slack_app.services.tracker import AnalysisTracker
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings=settings,
         rd_client=RDClient(),
         key_store=InMemoryRDKeyStore(),
-        tracker=AnalysisTracker(),
     )
 
     oauth_settings = AsyncOAuthSettings(
