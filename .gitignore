@@ -50,3 +50,6 @@ __pycache__/
 
 # Local OAuth file stores (Phase A; replaced by DynamoDB in Phase C)
 data/
+
+# Internal deployment notes — kept out of the public repo
+docs/aws-deployment.md
