@@ -7,19 +7,12 @@ from slack_bolt.app.async_app import AsyncApp
 
 from reality_defender_slack_app.background import spawn
 from reality_defender_slack_app.deps import Deps
-from reality_defender_slack_app.services.analysis import (
-    analyze_file_and_post,
-    analyze_url_and_post,
-)
+from reality_defender_slack_app.services.analysis import analyze_targets
 from reality_defender_slack_app.services.keys import (
     SETUP_REQUIRED_MESSAGE,
     resolve_api_key,
 )
-from reality_defender_slack_app.services.media import (
-    collect_media,
-    download_slack_file,
-    extract_social_url,
-)
+from reality_defender_slack_app.services.media import collect_media, extract_social_url
 
 logger = logging.getLogger(__name__)
 
@@ -55,76 +48,22 @@ async def _process_mention(
         media = collect_media(event)
         url = extract_social_url(event.get("text", ""))
 
-        if media:
-            bot_token = context["bot_token"]
-            for media_url, name in media:
-                spawn(
-                    _download_and_analyze(
-                        deps,
-                        client,
-                        api_key=api_key,
-                        channel_id=channel_id,
-                        thread_ts=thread_ts,
-                        url=media_url,
-                        name=name,
-                        bot_token=bot_token,
-                    )
-                )
-            return
-
-        if url:
+        if not media and not url:
             await client.chat_postMessage(
-                channel=channel_id,
-                thread_ts=thread_ts,
-                text=f":hourglass_flowing_sand: Analyzing `{url}`...",
-            )
-            spawn(
-                analyze_url_and_post(
-                    client=client,
-                    rd_client=deps.rd_client,
-                    api_key=api_key,
-                    channel_id=channel_id,
-                    thread_ts=thread_ts,
-                    url=url,
-                )
+                channel=channel_id, thread_ts=thread_ts, text=USAGE_MESSAGE
             )
             return
 
-        await client.chat_postMessage(
-            channel=channel_id, thread_ts=thread_ts, text=USAGE_MESSAGE
+        await analyze_targets(
+            client=client,
+            rd_client=deps.rd_client,
+            api_key=api_key,
+            channel_id=channel_id,
+            thread_ts=thread_ts,
+            media=media,
+            url=url,
+            bot_token=context["bot_token"],
         )
+
     except Exception:
         logger.exception("Error handling app_mention in channel %s", channel_id)
-
-
-async def _download_and_analyze(
-    deps: Deps,
-    client: Any,
-    *,
-    api_key: str,
-    channel_id: str,
-    thread_ts: str,
-    url: str,
-    name: str,
-    bot_token: str,
-) -> None:
-    try:
-        content = await download_slack_file(url, bot_token)
-    except Exception:
-        logger.exception("Failed to download mention media %s", url)
-        return
-
-    await client.chat_postMessage(
-        channel=channel_id,
-        thread_ts=thread_ts,
-        text=f":hourglass_flowing_sand: Analyzing `{name}`...",
-    )
-    await analyze_file_and_post(
-        client=client,
-        rd_client=deps.rd_client,
-        api_key=api_key,
-        channel_id=channel_id,
-        thread_ts=thread_ts,
-        content=content,
-        filename=name,
-    )

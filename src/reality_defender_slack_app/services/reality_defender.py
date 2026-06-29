@@ -21,12 +21,16 @@ MAX_POLL_ATTEMPTS = 150
 @contextlib.asynccontextmanager
 async def _rd_session(api_key: str) -> AsyncIterator[RealityDefender]:
     """Yield a RealityDefender client for the given key, cleaning up afterward."""
+    logger.info("Opening Reality Defender session")
     rd = RealityDefender(api_key=api_key)
     try:
         yield rd
     finally:
-        with contextlib.suppress(Exception):
+        try:
             await rd.cleanup()
+            logger.info("Closed Reality Defender session")
+        except Exception:
+            logger.warning("Reality Defender session cleanup failed", exc_info=True)
 
 
 class RDClient:

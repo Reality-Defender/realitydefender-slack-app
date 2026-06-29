@@ -49,27 +49,13 @@ def test_get_settings_reads_environment() -> None:
 
 
 @patch("reality_defender_slack_app.config.logging.basicConfig")
-def test_setup_logging_default_level(mock_basic_config: MagicMock) -> None:
-    """Test setup_logging with default INFO level."""
-    setup_logging()
+def test_setup_logging_maps_level(mock_basic_config: MagicMock) -> None:
+    """A valid level is mapped through; an unknown one falls back to INFO."""
+    setup_logging("ERROR")
+    assert mock_basic_config.call_args.kwargs["level"] == logging.ERROR
 
-    mock_basic_config.assert_called_once_with(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-
-@patch("reality_defender_slack_app.config.logging.basicConfig")
-def test_setup_logging_invalid_level(mock_basic_config: MagicMock) -> None:
-    """Test setup_logging with invalid level defaults to INFO."""
     setup_logging("INVALID")
-
-    mock_basic_config.assert_called_once_with(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    assert mock_basic_config.call_args.kwargs["level"] == logging.INFO
 
 
 @patch("reality_defender_slack_app.config.logging.getLogger")

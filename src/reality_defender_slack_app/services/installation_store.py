@@ -60,9 +60,7 @@ class DynamoDBInstallationStore(AsyncInstallationStore):
 
     async def async_save(self, installation: Installation) -> None:
         # Bot-only: persist just the bot installation, not per-user records.
-        await self.async_save_bot(installation.to_bot())
-
-    async def async_save_bot(self, bot: Bot) -> None:
+        bot = installation.to_bot()
         # bot_token is typed str but is None at runtime for token-less installs.
         if not bot.bot_token:
             self.logger.debug("Skipped saving a bot installation without a bot token")

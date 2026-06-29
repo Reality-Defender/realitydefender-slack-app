@@ -18,7 +18,7 @@ async def app_home_default(client: Any, event: Any) -> None:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "You can use this app to analyze certain files for content authenticity. Go ahead and try it by right clicking on some posted media.",
+                        "text": "You can use this app to analyze certain files for content authenticity. Go ahead and try it by tagging @RealityDefender and submitting media or a social media URL. You can also right click on existing media and use the 'analyze' shortcut.",
                     },
                 },
                 {"type": "divider"},
