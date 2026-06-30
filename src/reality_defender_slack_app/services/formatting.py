@@ -55,7 +55,7 @@ def format_result(result: Mapping[str, Any], label: str, media_id: str | None = 
             for m in group_models:
                 m_score = f"`{m['score']:.0%}`" if m.get("score") is not None else "—"
                 # Drop any models that aren't used
-                if m['status'] != "ANALYZING":
+                if m["status"] != "ANALYZING":
                     lines.append(f"  • {m['name']}: {m['status']}  {m_score}")
 
     if media_id:
