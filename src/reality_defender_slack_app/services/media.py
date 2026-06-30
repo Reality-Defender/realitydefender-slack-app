@@ -36,8 +36,33 @@ SUPPORTED_MIMETYPES = {
     "audio/ogg",
 }
 
+# Friendlier file extensions for the supported MIME types, for user-facing help.
+# Types without an entry fall back to the MIME subtype (e.g. "image/heic" -> "heic").
+_MIMETYPE_EXTENSIONS = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "video/mp4": "mp4",
+    "video/mov": "mov",
+    "audio/mpeg": "mp3",
+    "audio/flac": "flac",
+    "audio/wav": "wav",
+    "audio/mp4": "m4a",
+    "audio/aac": "aac",
+    "audio/ogg": "ogg",
+}
+
 # Slack file downloads can be large; cap how long we wait on the transfer.
 DOWNLOAD_TIMEOUT_SECONDS = 60
+
+
+def supported_extensions() -> list[str]:
+    """Sorted, de-duplicated friendly file extensions for the supported types."""
+    return sorted(
+        {_MIMETYPE_EXTENSIONS.get(m, m.split("/")[-1]) for m in SUPPORTED_MIMETYPES}
+    )
 
 
 def is_social_url(url: str) -> bool:

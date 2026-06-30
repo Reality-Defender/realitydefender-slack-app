@@ -12,13 +12,23 @@ from reality_defender_slack_app.services.keys import (
     SETUP_REQUIRED_MESSAGE,
     resolve_api_key,
 )
-from reality_defender_slack_app.services.media import collect_media, extract_social_url
+from reality_defender_slack_app.services.media import (
+    SOCIAL_MEDIA_DOMAINS,
+    collect_media,
+    extract_social_url,
+    supported_extensions,
+)
 
 logger = logging.getLogger(__name__)
 
+_SUPPORTED_FILE_TYPES = ", ".join(f"`.{ext}`" for ext in supported_extensions())
+_SUPPORTED_SOCIAL_LINKS = ", ".join(f"`{d}`" for d in sorted(SOCIAL_MEDIA_DOMAINS))
+
 USAGE_MESSAGE = (
     "Mention me with a supported social media link or attach a file, "
-    "e.g. `@Reality Defender https://x.com/...` or `@Reality Defender` with a file."
+    "e.g. `@Reality Defender https://x.com/...` or `@Reality Defender` with a file.\n"
+    f"*Supported file types:* \n{_SUPPORTED_FILE_TYPES}.\n"
+    f"*Supported social media links:* \n{_SUPPORTED_SOCIAL_LINKS}."
 )
 
 
