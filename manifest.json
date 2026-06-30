@@ -24,46 +24,46 @@
     ],
     "slash_commands": [
       {
-        "command": "/analyze",
-        "description": "Analyzes links for AI generated fakes",
-        "usage_hint": "link to media",
-        "should_escape": false
-      },
-      {
-        "command": "/analysis-status",
-        "description": "Returns the status of ongoing tasks",
-        "should_escape": false
-      },
-      {
         "command": "/setup-rd",
-        "description": "Sets up a session with Reality Defender",
+        "url": "https://<your-domain>/slack/events",
+        "description": "Register this workspace's Reality Defender API key",
         "usage_hint": "[your RD key]",
         "should_escape": false
       }
     ]
   },
   "oauth_config": {
+    "redirect_urls": [
+      "https://<your-domain>/slack/oauth_redirect"
+    ],
     "scopes": {
       "bot": [
         "commands",
+        "chat:write",
         "files:read",
         "remote_files:read",
-        "chat:write",
+        "channels:join",
+        "app_mentions:read",
         "links:read"
       ]
     }
   },
   "settings": {
     "event_subscriptions": {
+      "request_url": "https://<your-domain>/slack/events",
       "bot_events": [
-        "app_home_opened"
+        "app_home_opened",
+        "app_mention",
+        "app_uninstalled",
+        "tokens_revoked"
       ]
     },
     "interactivity": {
-      "is_enabled": true
+      "is_enabled": true,
+      "request_url": "https://<your-domain>/slack/events"
     },
     "org_deploy_enabled": false,
-    "socket_mode_enabled": true,
+    "socket_mode_enabled": false,
     "token_rotation_enabled": false
   }
 }

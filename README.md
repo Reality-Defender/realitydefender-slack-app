@@ -12,6 +12,7 @@ helping organizations protect against disinformation and maintain trust in their
 
 ## Features
 
+- **Mention to analyze**: `@mention` the bot with a social media link or an attached file to run a check
 - **Real-time Analysis**: Analyze media files directly from Slack messages using the right-click context menu
 - **Multiple File Formats**: Supports JPG, JPEG, PNG, and MP4 files, among others.
 - **Asynchronous Processing**: Non-blocking analysis that allows continued Slack usage while processing
@@ -21,7 +22,8 @@ helping organizations protect against disinformation and maintain trust in their
 The application is built with:
 
 - **Python 3.12+**: Modern async/await patterns for concurrent operations
-- **Slack Bolt**: Official Slack SDK for Python with socket mode support
+- **FastAPI + uvicorn**: HTTP server receiving Slack events and the OAuth install flow
+- **Slack Bolt**: Official Slack SDK for Python (async), multi-workspace OAuth
 - **Reality Defender SDK**: Integration with Reality Defender's detection API
 - **Pydantic**: Configuration management and data validation
 - **Docker**: Containerized deployment for easy scaling
@@ -52,12 +54,12 @@ The application is built with:
 3. **Set up environment variables**:
    ```bash
    cp .env.example .env
-   # Edit .env with your Slack tokens
+   # Edit .env with your Slack app credentials (client id/secret, signing secret)
    ```
 
 4. **Run the application**:
    ```bash
-   uv run ./src/reality_defender_slack_app/__init__.py
+   uv run rd-slack-app
    ```
 
 ### Docker Deployment
@@ -70,9 +72,11 @@ The application is built with:
 2. **Run with environment variables**:
    ```bash
    docker run -d \
-     -e SLACK_BOT_TOKEN=your-bot-token \
-     -e SLACK_APP_TOKEN=your-app-token \
+     -e SLACK_CLIENT_ID=your-client-id \
+     -e SLACK_CLIENT_SECRET=your-client-secret \
+     -e SLACK_SIGNING_SECRET=your-signing-secret \
      -e LOG_LEVEL=INFO \
+     -p 3000:3000 \
      reality-defender-slack-app
    ```
 
@@ -82,8 +86,15 @@ The application is built with:
 docker-compose up -d
 ```
 
+### Production storage (AWS)
+
+Locally the app uses ephemeral in-memory / file stores and needs no AWS. In
+production it stores Slack installations, OAuth state, and per-workspace Reality
+Defender keys in DynamoDB, with the RD keys encrypted via AWS KMS. Set the
+`DYNAMODB_*_TABLE` and `RD_KEY_KMS_KEY_ID` variables to enable it.
+
 ## Basic Slack usage
 
 - Register your Reality Defender API key with the `/setup-rd <your key>` command.
-- Click on `More options` in any message containing supported media types in Slack, then click on `Analyze media`.
-- Type `/analysis-status` to see the status of any ongoing media analysis.
+- Mention the bot with a supported social media link or an attached file, e.g. `@Reality Defender https://x.com/...` or `@Reality Defender` with a file attached.
+- Alternatively, click `More options` on any message containing supported media, then click `Analyze media`.

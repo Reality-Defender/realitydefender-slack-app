@@ -1,5 +1,13 @@
 from typing import Any
 
+from reality_defender_slack_app.services.media import (
+    SOCIAL_MEDIA_DOMAINS,
+    supported_extensions,
+)
+
+_SUPPORTED_FILE_TYPES = ", ".join(f"`.{ext}`" for ext in supported_extensions())
+_SUPPORTED_SOCIAL_LINKS = ", ".join(f"`{d}`" for d in sorted(SOCIAL_MEDIA_DOMAINS))
+
 
 async def app_home_default(client: Any, event: Any) -> None:
     await client.views_publish(
@@ -18,14 +26,7 @@ async def app_home_default(client: Any, event: Any) -> None:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "You can use this app to analyze certain files for content authenticity. Go ahead and try it by right clicking on some posted media.",
-                    },
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "👀 You can view all your pending analysis with `/analysis-status`",
+                        "text": "You can use this app to analyze certain files for content authenticity. Go ahead and try it by tagging @RealityDefender and submitting media or a social media URL. You can also right click on existing media and use the 'analyze' shortcut.",
                     },
                 },
                 {"type": "divider"},
@@ -111,7 +112,9 @@ async def notify_acknowledge_analysis_request(
                         "text": {
                             "type": "mrkdwn",
                             "text": "There are no supported file types for analysis attached to this message. "
-                            "Please try again with a different file type.",
+                            "Please try again with a different file type. "
+                            f"The supported file types are {_SUPPORTED_FILE_TYPES} "
+                            f"and supported social media links are {_SUPPORTED_SOCIAL_LINKS}.",
                         },
                     }
                 ],

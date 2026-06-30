@@ -1,35 +1,59 @@
-import os
+from __future__ import annotations
+
 import logging
-from pydantic import BaseModel, Field
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-from dotenv import load_dotenv
+class Settings(BaseSettings):
+    """Configuration for the Slack bot, loaded from the environment / .env file."""
 
-load_dotenv()
-
-
-class Config(BaseModel):
-    """Configuration management for the Slack bot."""
-
-    # Slack configuration
-    slack_bot_token: str = Field(
-        alias="SLACK_BOT_TOKEN",
-        description="Token for the Slack bot user.",
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
-    slack_app_token: str = Field(
-        alias="SLACK_APP_TOKEN",
-        description="Token for the Slack app.",
-    )
+    # Slack app credentials for multi-workspace OAuth.
+    slack_client_id: str
+    slack_client_secret: str
+    slack_signing_secret: str
 
-    # Application configuration
-    log_level: str = Field("INFO", alias="LOG_LEVEL", description="Current log level")
+    # Reality Defender: optional shared key for LOCAL DEV ONLY. It is used as a
+    # fallback only when set; in production leave it unset so each workspace must
+    # supply its own key via /setup-rd and a missing key never silently bills the
+    # operator's account.
+    reality_defender_api_key: str | None = None
+
+    # AWS / DynamoDB durable storage. When the table names below are set,
+    # create_app uses DynamoDB-backed stores; otherwise it falls back to
+    # ephemeral in-memory / file stores so local dev needs no AWS.
+    aws_region: str | None = None
+    dynamodb_installations_table: str | None = None
+    dynamodb_oauth_states_table: str | None = None
+    dynamodb_rd_keys_table: str | None = None
+    # KMS key that encrypts RD API keys at the application layer before they are
+    # written to DynamoDB. Required when dynamodb_rd_keys_table is set.
+    rd_key_kms_key_id: str | None = None
+
+    log_level: str = "INFO"
+    port: int = 3000
+
+    @property
+    def dynamodb_enabled(self) -> bool:
+        """True when all DynamoDB tables are configured (production mode)."""
+        return bool(
+            self.dynamodb_installations_table
+            and self.dynamodb_oauth_states_table
+            and self.dynamodb_rd_keys_table
+        )
 
 
-def load_config(env: dict[str, str] | None = None) -> Config:
-    env = env or dict(os.environ)
-
-    return Config.model_validate(env)
+@lru_cache
+def get_settings() -> Settings:
+    """Return a cached Settings instance (env read once per process)."""
+    return Settings()  # type: ignore[call-arg]  # values come from the environment
 
 
 def setup_logging(log_level: str = "INFO") -> None:

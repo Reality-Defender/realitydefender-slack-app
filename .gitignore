@@ -45,5 +45,11 @@ dmypy.json
 *.swo
 .DS_Store
 
-src/reality_defender_slack_app/__pycache__/
-tests/__pycache__/
+__pycache__/
+*.py[cod]
+
+# Local OAuth file stores (Phase A; replaced by DynamoDB in Phase C)
+data/
+
+# Internal deployment notes — kept out of the public repo
+docs/aws-deployment.md
