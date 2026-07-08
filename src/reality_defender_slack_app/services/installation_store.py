@@ -20,8 +20,14 @@ if TYPE_CHECKING:
 
 
 def _workspace_pk(enterprise_id: str | None, team_id: str | None) -> str:
-    """Partition key for a workspace / org installation."""
-    return f"{enterprise_id or 'none'}-{team_id or 'none'}"
+    """Partition key for a workspace / org installation.
+
+    Joins whichever ids are present, so a normal workspace install is just its
+    team id ("T1"), an org-wide install is its enterprise id ("E1"), and a
+    grid workspace install is "E1-T1". Slack team/enterprise ids never collide
+    (distinct "T"/"E" prefixes), so this stays unambiguous without filler.
+    """
+    return "-".join(part for part in (enterprise_id, team_id) if part)
 
 
 class DynamoDBInstallationStore(AsyncInstallationStore):
@@ -31,10 +37,11 @@ class DynamoDBInstallationStore(AsyncInstallationStore):
     installation_store_bot_only=True and authorizes via find_bot. We therefore
     store just the workspace bot token — no per-user installer records.
 
-    Layout: pk = "{enterprise_id}-{team_id}", sk = "bot-latest",
-    payload = the Bot model's __dict__ as a JSON string (which sidesteps
-    DynamoDB's Decimal/number coercion). boto3 is synchronous, so all calls run
-    in a worker thread to keep the event loop free.
+    Layout: one item per workspace, keyed by the workspace pk (see
+    _workspace_pk), payload = the Bot model's __dict__ as a JSON string (sidesteps
+    DynamoDB's Decimal/number coercion). Because there's exactly one record per
+    workspace, the table uses a simple partition key (no sort key). boto3 is
+    synchronous, so all calls run in a worker thread to keep the event loop free.
     """
 
     def __init__(self, table: Table, *, logger: Logger | None = None) -> None:
@@ -45,14 +52,14 @@ class DynamoDBInstallationStore(AsyncInstallationStore):
     def logger(self) -> Logger:
         return self._logger
 
-    async def _put(self, pk: str, sk: str, payload: dict[str, Any]) -> None:
+    async def _put(self, pk: str, payload: dict[str, Any]) -> None:
         await asyncio.to_thread(
             self._table.put_item,
-            Item={"pk": pk, "sk": sk, "payload": json.dumps(payload)},
+            Item={"pk": pk, "payload": json.dumps(payload)},
         )
 
-    async def _get(self, pk: str, sk: str) -> dict[str, Any] | None:
-        response = await asyncio.to_thread(self._table.get_item, Key={"pk": pk, "sk": sk})
+    async def _get(self, pk: str) -> dict[str, Any] | None:
+        response = await asyncio.to_thread(self._table.get_item, Key={"pk": pk})
         item = response.get("Item")
         if not item:
             return None
@@ -66,7 +73,7 @@ class DynamoDBInstallationStore(AsyncInstallationStore):
             self.logger.debug("Skipped saving a bot installation without a bot token")
             return
         pk = _workspace_pk(bot.enterprise_id, bot.team_id)
-        await self._put(pk, "bot-latest", bot.__dict__)
+        await self._put(pk, bot.__dict__)
 
     async def async_find_bot(
         self,
@@ -77,14 +84,14 @@ class DynamoDBInstallationStore(AsyncInstallationStore):
     ) -> Bot | None:
         if is_enterprise_install:
             team_id = None
-        data = await self._get(_workspace_pk(enterprise_id, team_id), "bot-latest")
+        data = await self._get(_workspace_pk(enterprise_id, team_id))
         return Bot(**data) if data else None
 
     async def async_delete_bot(
         self, *, enterprise_id: str | None, team_id: str | None
     ) -> None:
         pk = _workspace_pk(enterprise_id, team_id)
-        await asyncio.to_thread(self._table.delete_item, Key={"pk": pk, "sk": "bot-latest"})
+        await asyncio.to_thread(self._table.delete_item, Key={"pk": pk})
 
     async def async_delete_all(
         self, *, enterprise_id: str | None, team_id: str | None

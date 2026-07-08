@@ -44,14 +44,8 @@ def _make_installs_table() -> "Table":
     db = _dynamodb()
     db.create_table(
         TableName="installs",
-        KeySchema=[
-            {"AttributeName": "pk", "KeyType": "HASH"},
-            {"AttributeName": "sk", "KeyType": "RANGE"},
-        ],
-        AttributeDefinitions=[
-            {"AttributeName": "pk", "AttributeType": "S"},
-            {"AttributeName": "sk", "AttributeType": "S"},
-        ],
+        KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
+        AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
         BillingMode="PAY_PER_REQUEST",
     )
     return db.Table("installs")
@@ -133,14 +127,14 @@ async def test_installation_store_save_and_find_bot(aws: None) -> None:
 
 @pytest.mark.asyncio
 async def test_installation_store_saves_bot_only(aws: None) -> None:
-    # Bot-only: async_save must persist exactly one item (bot-latest), no
-    # per-user installer records.
+    # Bot-only: async_save must persist exactly one item per workspace (the bot
+    # record), keyed by the workspace pk, with no per-user installer records.
     table = _make_installs_table()
     store = DynamoDBInstallationStore(table)
     await store.async_save(_installation())
 
     items = table.scan()["Items"]
-    assert [item["sk"] for item in items] == ["bot-latest"]
+    assert [item["pk"] for item in items] == ["T1"]
 
 
 @pytest.mark.asyncio
