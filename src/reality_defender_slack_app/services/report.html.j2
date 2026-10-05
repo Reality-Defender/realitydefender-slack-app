@@ -1,0 +1,432 @@
+{#- Signal-bar icon from the RealScan design. level: 3 manipulated/detected,
+    2 suspicious, 1 authentic/not detected, 0 inconclusive. -#}
+{#- Fills are inline attributes: WeasyPrint doesn't apply page CSS inside SVG. -#}
+{#- RealScan design colors (independent of the Slack message's emoji). -#}
+{% set bar_colors = {'danger': '#b5412b', 'warning': '#b8792a', 'ok': '#5f6b1f', 'neutral': '#b9b8bf'} %}
+{% macro bars(tone, level, label='') -%}
+{%- set on = bar_colors.get(tone, '#b9b8bf') -%}{%- set off = '#d9d8dd' -%}
+<svg class="bars" viewBox="0 0 12 12" role="img" aria-label="{{ label }}"><title>{{ label }}</title><rect x="1" y="7" width="2" height="4" rx=".5" fill="{{ on if level >= 1 else off }}"/><rect x="5" y="4" width="2" height="7" rx=".5" fill="{{ on if level >= 2 else off }}"/><rect x="9" y="1" width="2" height="10" rx=".5" fill="{{ on if level >= 3 else off }}"/></svg>
+{%- endmacro %}
+{% macro detected(flag) -%}
+{%- if flag -%}{{ bars('danger', 3, 'Detected') }}{%- else -%}{{ bars('ok', 1, 'Not detected') }}{%- endif -%}
+{%- endmacro %}
+{% macro state_icon(state) -%}
+{%- if state == 'detected' -%}{{ bars('danger', 3, 'Detected') }}
+{%- elif state == 'suspicious' -%}{{ bars('warning', 2, 'Suspicious') }}
+{%- else -%}{{ bars('ok', 1, 'Not detected') }}{%- endif -%}
+{%- endmacro %}
+{% set levels = {'danger': 3, 'warning': 2, 'ok': 1, 'neutral': 0} %}
+{% macro glyph(name) -%}
+<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+{%- if name == 'Prepared for' -%}<rect x="3.5" y="2.5" width="9" height="11" rx="1"/><path d="M6 2.5h4v2H6zM6 7.5h4M6 10h4"/>
+{%- elif name == 'Submitted by' -%}<circle cx="8" cy="5.5" r="2.5"/><path d="M3 13.5c.8-2.6 2.7-4 5-4s4.2 1.4 5 4"/>
+{%- elif name in ('Media submitted', 'Report created') -%}<rect x="2.5" y="3.5" width="11" height="10" rx="1"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>
+{%- elif name == 'Slack' or name == 'Link' -%}<path d="M7 9a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-.7.7M9 7a3 3 0 0 0-4.2 0l-2 2A3 3 0 0 0 7 13.2l.7-.7"/>
+{%- else -%}<path d="M6 2.5 5 13.5M11 2.5l-1 11M2.5 6h11M2.5 10h11"/>
+{%- endif -%}</svg>
+{%- endmacro %}
+{% macro media_icon(kind) -%}
+<svg class="media-icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+{%- if kind == 'VIDEO' -%}<rect x="1.5" y="3.5" width="9" height="9" rx="1"/><path d="m10.5 7 4-2.5v7l-4-2.5"/>
+{%- elif kind == 'AUDIO' -%}<path d="M2 7v2M4.5 5v6M7 3v10M9.5 5v6M12 6.5v3M14.5 7.5v1"/>
+{%- else -%}<rect x="1.5" y="2.5" width="13" height="11" rx="1"/><circle cx="5.5" cy="6" r="1.3"/><path d="m1.5 12 4-4 3 3 2-2 4 4"/>
+{%- endif -%}</svg>
+{%- endmacro %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ r.kind_title }} · {{ r.title }}</title>
+<style>
+/* RealScan report design (Web App 2.0): white pages, tinted
+   conclusion chip/banner, signal-bar icons, icon-led details list. */
+:root {
+  --ink: #1d1c22;
+  --muted: #8b8a93;
+  --rule: #e7e6e9;
+  --panel: #f4f4f4;
+
+  --ok-text: #5f6b1f;
+  --ok-chip: #eff0e6;
+  --ok-banner: #e8e8dd;
+  --warn-text: #b8792a;
+  --warn-chip: #f8f0e4;
+  --warn-banner: #f2e9dd;
+  --danger-text: #b5412b;
+  --danger-chip: #f7ebe8;
+  --danger-banner: #efe3e0;
+  --neutral-text: #7b7a82;
+  --neutral-chip: #f6f6f6;
+  --neutral-banner: #f0efee;
+}
+
+@page {
+  size: A4;
+  margin: 0.6in 0.7in 0.7in 0.7in;
+  @bottom-left { content: element(footer-left); }
+  @bottom-right {
+    content: counter(page);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 7pt;
+    color: #8b8a93;
+  }
+}
+@page :first {
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+* { box-sizing: border-box; }
+html, body { background: #fff; }
+body {
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  font-size: 9.5pt;
+  line-height: 1.45;
+  color: var(--ink);
+}
+a { color: var(--ink); text-decoration: underline; text-decoration-color: #c4c3ca; }
+strong { font-weight: 600; }
+.mono { font-family: "DejaVu Sans Mono", Menlo, monospace; font-size: 8pt; overflow-wrap: anywhere; word-break: break-all; }
+.small { font-size: 7.5pt; }
+
+.page-footer-left { position: running(footer-left); font-size: 7pt; color: var(--muted); }
+
+/* Tones */
+.tone-ok { --t-text: var(--ok-text); --t-chip: var(--ok-chip); --t-banner: var(--ok-banner); }
+.tone-warning { --t-text: var(--warn-text); --t-chip: var(--warn-chip); --t-banner: var(--warn-banner); }
+.tone-danger { --t-text: var(--danger-text); --t-chip: var(--danger-chip); --t-banner: var(--danger-banner); }
+.tone-neutral { --t-text: var(--neutral-text); --t-chip: var(--neutral-chip); --t-banner: var(--neutral-banner); }
+
+/* Signal-bar icons */
+.bars { width: 9pt; height: 9pt; flex: 0 0 auto; vertical-align: -1pt; }
+.glyph { width: 11pt; height: 11pt; color: var(--muted); flex: 0 0 auto; }
+
+/* Cover */
+.cover { page-break-after: always; break-after: page; }
+.brand { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30pt; }
+.logo svg { height: 26pt; width: auto; display: block; }
+.product { display: flex; align-items: center; gap: 5pt; font-weight: 600; font-size: 9pt; }
+.product .glyph { color: var(--ink); }
+h1 { font-weight: 300; font-size: 30pt; line-height: 1.1; margin: 0 0 8pt 0; }
+.subject { display: flex; align-items: center; gap: 7pt; font-size: 13pt; margin-bottom: 14pt; overflow-wrap: anywhere; word-break: break-all; }
+.media-icon { width: 13pt; height: 13pt; flex: 0 0 auto; }
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6pt;
+  padding: 7pt 10pt;
+  border-radius: 3pt;
+  background: var(--t-chip);
+  color: var(--t-text);
+  font-size: 11pt;
+  margin-bottom: 14pt;
+}
+.chip strong { font-weight: 500; }
+.chip .bars { width: 10pt; height: 10pt; }
+
+.preview {
+  background: var(--panel);
+  border-radius: 4pt;
+  height: 3.6in;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18pt;
+  overflow: hidden;
+}
+.preview img { max-width: 100%; max-height: 3.6in; }
+.wave { width: 80%; height: 1.4in; }
+.no-preview .media-icon { width: 40pt; height: 40pt; color: #b9b8bf; }
+
+.facts th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--muted);
+  width: 1.9in;
+  padding: 4pt 8pt 4pt 0;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.facts th .glyph { margin-right: 7pt; vertical-align: -2pt; }
+.facts td { padding: 4pt 0; overflow-wrap: anywhere; }
+
+/* Content pages */
+table { border-collapse: collapse; width: 100%; }
+h2 { font-weight: 300; font-size: 18pt; margin: 0 0 4pt 0; page-break-after: avoid; break-after: avoid; }
+h3 { font-weight: 400; font-size: 12pt; margin: 18pt 0 8pt 0; page-break-after: avoid; break-after: avoid; }
+.lede { color: var(--muted); font-size: 8.5pt; margin: 0 0 12pt 0; }
+.block { margin-top: 26pt; }
+.keep { page-break-inside: avoid; break-inside: avoid; }
+
+.banner {
+  background: var(--t-banner);
+  border-radius: 4pt;
+  padding: 11pt 13pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.banner-kicker { font-size: 7.5pt; }
+.banner-title { font-size: 14pt; color: var(--t-text); margin: 1pt 0 4pt; }
+.banner p { margin: 0; font-size: 9.5pt; }
+
+/* Two-column rows (description | content). Floats, not flex: WeasyPrint
+   sizes tables inside flex rows incorrectly and they overflow the page. */
+.split {
+  padding: 12pt 0;
+  border-top: 1px solid var(--rule);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.split::after { content: ""; display: block; clear: both; }
+.split-desc { float: left; width: 1.9in; }
+.split-title { font-weight: 500; margin-bottom: 3pt; }
+.split-desc p { margin: 0; color: var(--muted); font-size: 8pt; }
+.split-body, .heatmap { margin-left: 2.15in; }
+/* A4 content width (6.87in) minus the description column. */
+.split > table { margin-left: 2.15in; width: 4.7in; }
+
+.models { border: 1px solid var(--rule); }
+.models th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 8pt;
+  padding: 6pt 9pt;
+  border-bottom: 1px solid var(--rule);
+  background: #fafafa;
+}
+.models td { padding: 6pt 9pt; border-bottom: 1px solid var(--rule); }
+.models tr:last-child td { border-bottom: none; }
+.c-icon { width: 0.9in; text-align: left; }
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4pt;
+  font-size: 7pt;
+  color: var(--muted);
+  margin-top: 2pt;
+}
+.legend span { margin-right: 10pt; }
+.legend span:last-child { margin-right: 0; }
+
+.heatmap img { max-width: 2.6in; max-height: 2.8in; border-radius: 3pt; }
+
+.outcomes th {
+  text-align: left;
+  font-weight: 500;
+  width: 2.1in;
+  padding: 8pt 8pt 8pt 0;
+  vertical-align: top;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--rule);
+}
+.outcomes th .bars { margin-right: 7pt; }
+.outcomes td { padding: 8pt 0; border-bottom: 1px solid var(--rule); color: #4a4952; }
+
+.sources { display: flex; flex-wrap: wrap; gap: 12pt 18pt; margin-top: 12pt; padding-left: 2.1in; }
+.source { flex: 0 0 calc(50% - 9pt); font-size: 8.5pt; page-break-inside: avoid; break-inside: avoid; overflow-wrap: anywhere; }
+.source-site { font-weight: 600; margin-bottom: 1pt; }
+.source-date { color: var(--muted); font-size: 7.5pt; margin-top: 2pt; }
+
+.signals { list-style: none; margin: 0; padding: 0; border: 1px solid var(--rule); border-radius: 3pt; }
+.signals li { display: flex; align-items: center; gap: 7pt; padding: 7pt 9pt; border-bottom: 1px solid var(--rule); }
+.signals li:last-child { border-bottom: none; }
+.signal-none { display: flex; align-items: center; gap: 7pt; padding: 7pt 9pt; border: 1px solid var(--rule); border-radius: 3pt; color: #4a4952; }
+.kv { border: 1px solid var(--rule); }
+.kv th { text-align: left; font-weight: 400; color: var(--muted); padding: 6pt 9pt; width: 1.4in; border-bottom: 1px solid var(--rule); }
+.kv td { padding: 6pt 9pt; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+.tag { display: inline-block; background: var(--panel); border-radius: 10pt; padding: 2pt 8pt; margin: 0 4pt 4pt 0; font-size: 8pt; }
+
+.limits { margin: 0; padding-left: 14pt; }
+.limits li { margin-bottom: 4pt; }
+
+@media screen {
+  body { max-width: 8.27in; margin: 0 auto; padding: 0.6in 0.7in; }
+  .page-footer-left { display: none; }
+  .cover { margin-bottom: 40pt; }
+}
+</style>
+</head>
+<body>
+<div class="page-footer-left">RealScan {{ r.kind_title|lower }} &nbsp;&middot;&nbsp; {{ r.request_id }}</div>
+
+{# ---------------- Cover ---------------- #}
+<section class="cover">
+  <header class="brand">
+    <div class="logo"><svg width="107" height="35" viewBox="0 0 107 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M15.9367 2.73207L13.9078 0.703159C13.4573 0.252698 12.8468 0 12.2101 0H0V3.20084H14.9421C15.3664 3.20084 15.7735 3.3693 16.0738 3.66961L18.1027 5.69852C18.5532 6.14898 19.1637 6.40168 19.8004 6.40168H32.0105V3.20084H17.0684C16.6441 3.20084 16.237 3.03237 15.9367 2.73207Z" fill="#2B2A33"/>
+<path d="M15.9367 9.9347L13.9078 7.9058C13.4573 7.45533 12.8468 7.20264 12.2101 7.20264H0V10.4035H14.9421C15.3664 10.4035 15.7735 10.5719 16.0738 10.8722L18.1027 12.9012C18.5532 13.3516 19.1637 13.6043 19.8004 13.6043H32.0105V10.4035H17.0684C16.6441 10.4035 16.237 10.235 15.9367 9.9347Z" fill="#2B2A33"/>
+<path d="M31.931 17.6056H17.0684C16.6441 17.6056 16.2365 17.4372 15.9367 17.1369L13.9078 15.1079C13.4573 14.6575 12.8468 14.4048 12.2101 14.4048H0V17.6056H14.9421C15.3664 17.6056 15.774 17.7741 16.0738 18.0744L18.1027 20.1033C18.5532 20.5538 19.1637 20.8065 19.8004 20.8065H31.931C31.9833 20.2801 32.0105 19.746 32.0105 19.206V17.6056H31.931Z" fill="#2B2A33"/>
+<path d="M15.9369 24.3395L13.908 22.3106C13.4576 21.8601 12.847 21.6074 12.2103 21.6074H0.179688C0.346583 22.716 0.627533 23.787 1.00893 24.8083H14.9424C15.3667 24.8083 15.7737 24.9767 16.074 25.277L18.1029 27.3059C18.5534 27.7564 19.1639 28.0091 19.8007 28.0091H29.3733C30.0299 27.014 30.5782 25.9415 31.002 24.8083H17.0686C16.6443 24.8083 16.2372 24.6398 15.9369 24.3395Z" fill="#2B2A33"/>
+<path d="M17.0712 32.0104C16.6469 32.0104 16.2398 31.8419 15.9395 31.5416L13.9106 29.5127C13.4601 29.0623 12.8496 28.8096 12.2129 28.8096H3.20312C4.11347 30.0218 5.19227 31.1001 6.40396 32.0104H14.9449C15.3692 32.0104 15.7763 32.1789 16.0766 32.4792L18.5973 34.9999C18.9358 34.9449 19.2706 34.8785 19.6018 34.8026C19.6154 34.8 19.6295 34.799 19.6431 34.7958C20.407 34.6185 21.1499 34.3851 21.8677 34.1026C21.8745 34.1 21.8813 34.0974 21.8881 34.0948C22.0309 34.0383 22.1733 33.9802 22.3145 33.9195C22.3187 33.9174 22.3234 33.9158 22.3276 33.9138C22.7597 33.728 23.1819 33.524 23.5932 33.3022C23.6225 33.2865 23.6512 33.2702 23.68 33.254C23.781 33.1986 23.882 33.1426 23.9819 33.085C24.0243 33.061 24.0661 33.0359 24.108 33.0113C24.1943 32.9605 24.2801 32.9092 24.3654 32.8569C24.4125 32.8281 24.459 32.7994 24.5056 32.7701C24.5862 32.7193 24.6662 32.6681 24.7457 32.6163C24.7928 32.5854 24.8399 32.555 24.8865 32.5237C24.9681 32.4692 25.0492 32.4133 25.1298 32.3573C25.1721 32.328 25.2145 32.2992 25.2564 32.2694C25.3673 32.1909 25.4766 32.1109 25.5855 32.0298C25.5949 32.023 25.6043 32.0162 25.6137 32.0088H17.0727L17.0712 32.0104Z" fill="#2B2A33"/>
+<path d="M43.7282 8.95567H46.6534C48.0926 8.95567 48.8905 9.5657 48.8905 11.0521V12.0064C48.8905 12.7571 48.969 13.2735 49.0783 13.6178H50.3455C50.2518 13.2269 50.1419 12.7263 50.1419 11.9598V10.8648C50.1419 9.33184 49.4377 8.86254 48.4526 8.58107C49.6099 8.31529 50.4705 7.34531 50.4705 5.95312C50.4705 4.27945 49.4226 3.21582 47.2791 3.21582H42.4297V13.6183H43.7282V8.95672V8.95567ZM43.7282 4.26271H47.1383C48.4991 4.26271 49.1092 4.85705 49.1092 6.06142C49.1092 7.26579 48.5771 7.98569 47.1226 7.98569H43.7282V4.26271Z" fill="#2B2A33"/>
+<path d="M59.149 11.2083H58.0069C57.7725 12.194 57.0683 12.9134 55.5353 12.9134C54.0024 12.9134 52.9388 12.1312 52.8446 9.98825H59.1333C59.1647 9.80043 59.1647 9.644 59.1647 9.441C59.1647 7.15731 57.8347 5.5459 55.4888 5.5459C52.8922 5.5459 51.6094 7.3603 51.6094 9.69108C51.6094 12.0219 52.7981 13.8677 55.4888 13.8677C58.1795 13.8677 58.9925 12.397 59.149 11.2083ZM55.5045 6.49966C56.9595 6.49966 57.8823 7.25043 57.9446 9.04966H52.876C53.0481 7.20387 54.0181 6.49966 55.504 6.49966H55.5045Z" fill="#2B2A33"/>
+<path d="M65.943 11.7871C65.943 12.3657 65.9901 12.9444 66.0524 13.6172H67.1945C67.116 12.8507 67.1008 12.2407 67.1008 11.6772V7.92286C67.1008 6.51498 66.1309 5.5293 63.9879 5.5293C61.8449 5.5293 60.6557 6.59293 60.6092 8.25142H61.8449C61.9234 7.23488 62.5021 6.51498 64.035 6.51498C65.5679 6.51498 65.9593 7.12501 65.9593 7.92286C65.9593 8.5172 65.615 8.73641 64.7863 8.87715L62.7998 9.20571C61.1104 9.48718 60.4219 10.285 60.4219 11.5522C60.4219 13.0386 61.5012 13.8207 63.0027 13.8207C64.8171 13.8207 65.6464 12.7257 65.9436 11.7871H65.943ZM61.688 11.5051C61.688 10.6607 62.1887 10.2536 63.2523 10.0344L64.5508 9.76866C65.1452 9.64362 65.5674 9.51805 65.9587 9.23658V9.90939C65.9587 11.3958 65.0986 12.8345 63.2523 12.8345C62.3294 12.8345 61.688 12.3966 61.688 11.5051Z" fill="#2B2A33"/>
+<path d="M70.2046 2.66699H68.9531V13.6172H70.2046V2.66699Z" fill="#2B2A33"/>
+<path d="M73.5489 3.21484H71.9375V4.51339H73.5489V3.21484Z" fill="#2B2A33"/>
+<path d="M73.3686 5.7959H72.1172V13.6175H73.3686V5.7959Z" fill="#2B2A33"/>
+<path d="M76.0332 11.7871C76.0332 13.0385 76.4241 13.6172 77.9261 13.6172H79.7719V12.6001H77.2847V6.78072H79.8656V5.79504H77.2847V4.05859H76.6119L76.1426 5.6857L74.5469 6.07651V6.78072H76.0327V11.7865L76.0332 11.7871Z" fill="#2B2A33"/>
+<path d="M84.9891 14.9155L88.665 5.7959H87.4293L85.0048 11.8183L84.7705 12.569L84.5047 11.8183L82.1111 5.7959H80.7969L83.8941 13.6175H84.332L83.4714 15.7291H81.297V16.7461H82.7829C84.1908 16.7461 84.5036 16.1675 84.9886 14.916L84.9891 14.9155Z" fill="#2B2A33"/>
+<path d="M46.747 17.6548H42.4297V28.0573H46.747C50.1571 28.0573 51.5964 25.6951 51.5964 22.8322C51.5964 19.9694 50.1571 17.6543 46.747 17.6543V17.6548ZM46.5126 27.0093H43.7282V18.7028H46.5126C49.297 18.7028 50.2356 20.1891 50.2356 22.8328C50.2356 25.4764 49.2813 27.0093 46.5126 27.0093Z" fill="#2B2A33"/>
+<path d="M60.3756 23.8809C60.3756 21.5972 59.0457 19.9858 56.6997 19.9858C54.1032 19.9858 52.8203 21.8002 52.8203 24.131C52.8203 26.4618 54.009 28.3076 56.6997 28.3076C59.3905 28.3076 60.2035 26.8369 60.3599 25.6483H59.2178C58.9834 26.6339 58.2792 27.3533 56.7463 27.3533C55.2134 27.3533 54.1497 26.5712 54.0556 24.4282H60.3442C60.3756 24.2404 60.3756 24.0839 60.3756 23.8809ZM54.0869 23.4896C54.2591 21.6438 55.2291 20.9396 56.7149 20.9396C58.2007 20.9396 59.0928 21.6904 59.155 23.4896H54.0864H54.0869Z" fill="#2B2A33"/>
+<path d="M62.3611 18.6869V20.189L61.0469 20.5175V21.2217H62.3611V28.0577H63.6126V21.2217H65.8963V20.2361H63.5184V18.0617H66.3342V17.1074H64.3476C62.8461 17.1074 62.3611 17.6395 62.3611 18.6874V18.6869Z" fill="#2B2A33"/>
+<path d="M74.0553 23.8809C74.0553 21.5972 72.7254 19.9858 70.3794 19.9858C67.7828 19.9858 66.5 21.8002 66.5 24.131C66.5 26.4618 67.6887 28.3076 70.3794 28.3076C73.0701 28.3076 73.8832 26.8369 74.0396 25.6483H72.8975C72.6631 26.6339 71.9589 27.3533 70.426 27.3533C68.893 27.3533 67.8294 26.5712 67.7352 24.4282H74.0239C74.0553 24.2404 74.0553 24.0839 74.0553 23.8809ZM67.7666 23.4896C67.9388 21.6438 68.9087 20.9396 70.3946 20.9396C71.8804 20.9396 72.7724 21.6904 72.8347 23.4896H67.7661H67.7666Z" fill="#2B2A33"/>
+<path d="M79.8879 19.9858C78.3392 19.9858 77.3693 20.8617 76.8843 22.2852V20.2359H75.6328V28.0575H76.8843V25.0696C76.8843 22.3789 77.8072 21.0338 79.5436 21.0338C80.6857 21.0338 81.4208 21.5345 81.4208 23.2081V28.0575H82.6722V23.0674C82.6722 21.0495 81.843 19.9858 79.8879 19.9858Z" fill="#2B2A33"/>
+<path d="M90.7263 21.722C90.1942 20.6113 89.209 19.9855 87.7697 19.9855C85.3139 19.9855 84.1875 21.7377 84.1875 24.1464C84.1875 26.5551 85.3139 28.3073 87.7697 28.3073C89.209 28.3073 90.1942 27.6659 90.7263 26.5551V28.0567H91.9777V17.1064H90.7263V21.7209V21.722ZM88.0198 27.2907C86.2368 27.2907 85.4541 26.2428 85.4541 24.1464C85.4541 22.05 86.2363 21.0021 88.0198 21.0021C89.6778 21.0021 90.7263 21.9407 90.7263 24.1464C90.7263 26.3522 89.6783 27.2907 88.0198 27.2907Z" fill="#2B2A33"/>
+<path d="M100.915 23.8809C100.915 21.5972 99.5847 19.9858 97.2388 19.9858C94.6422 19.9858 93.3594 21.8002 93.3594 24.131C93.3594 26.4618 94.5481 28.3076 97.2388 28.3076C99.9295 28.3076 100.743 26.8369 100.9 25.6483H99.7574C99.5225 26.6339 98.8188 27.3533 97.2859 27.3533C95.7529 27.3533 94.6893 26.5712 94.5951 24.4282H100.884C100.915 24.2404 100.915 24.0839 100.915 23.8809H100.915ZM94.6265 23.4896C94.7987 21.6438 95.7686 20.9396 97.2545 20.9396C98.7403 20.9396 99.6323 21.6904 99.6946 23.4896H94.626H94.6265Z" fill="#2B2A33"/>
+<path d="M106.607 20.1265C105.12 20.1265 104.213 21.0023 103.744 22.3009V20.2358H102.492V28.0574H103.744V25.1789C103.744 22.9731 104.244 21.2838 106.559 21.3617H106.888V20.126H106.607V20.1265Z" fill="#2B2A33"/>
+</svg></div>
+    <div class="product"><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3"/><rect x="5" y="5" width="6" height="6"/></svg>RealScan</div>
+  </header>
+
+  <h1>{{ r.kind_title }}</h1>
+  <div class="subject">{{ media_icon(r.media_type) }}<span>{{ r.title }}</span></div>
+
+  <div class="chip tone-{{ r.conclusion_tone }}">
+    <span class="chip-label">Conclusion:</span>
+    {{ bars(r.conclusion_tone, levels[r.conclusion_tone], r.conclusion_label) }}
+    <strong>{{ r.conclusion_label }}</strong>
+  </div>
+
+  <div class="preview">
+    {% if r.preview %}
+    <img src="{{ r.preview }}" alt="Preview of the analyzed media">
+    {% elif r.media_type == 'AUDIO' %}
+    <svg class="wave" viewBox="0 0 {{ waveform|length * 6 }} 60" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {% for h in waveform %}<rect x="{{ loop.index0 * 6 }}" y="{{ 30 - h / 2 }}" width="1.6" height="{{ h }}" rx=".8" fill="#7a7980"/>{% endfor %}
+    </svg>
+    {% else %}
+    <div class="no-preview">{{ media_icon(r.media_type) }}</div>
+    {% endif %}
+  </div>
+
+  <table class="facts">
+    {% for f in r.cover_facts %}
+    <tr>
+      <th>{{ glyph(f.label) }}<span>{{ f.label }}</span></th>
+      <td class="{{ 'mono' if f.mono else '' }}">{% if f.href %}<a href="{{ f.href }}">{{ f.value }}</a>{% else %}{{ f.value }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+
+{# ---------------- Analysis models ---------------- #}
+<section class="page">
+  <h2>Analysis models</h2>
+  <p class="lede">Reality Defender uses a multi-model ensemble. No single model determines the verdict.</p>
+
+  <div class="banner tone-{{ r.conclusion_tone }}">
+    <div class="banner-kicker">{{ 'Overall conclusion' if r.is_conclusive else r.conclusion_label }}</div>
+    <div class="banner-title">{{ r.conclusion_label if r.is_conclusive else (r.status_label if r.status != 'UNABLE_TO_EVALUATE' else 'Processing error') }}</div>
+    <p>{{ r.conclusion_text }}</p>
+  </div>
+
+  {% if r.model_tables %}
+  <h3>Media analysis</h3>
+  {% for t in r.model_tables %}
+  <div class="split">
+    <div class="split-desc">
+      <div class="split-title">{{ t.title }}</div>
+      <p>{{ t.description }}</p>
+    </div>
+    <table class="models">
+      <thead><tr><th>Manipulation technique</th><th class="c-icon">Detected</th></tr></thead>
+      <tbody>
+      {% for m in t.rows %}
+      <tr><td>{{ m.name }}</td><td class="c-icon">{{ state_icon(m.state) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+  {% set any_suspicious = r.model_tables | map(attribute='rows') | sum(start=[]) | selectattr('state', 'equalto', 'suspicious') | list %}
+  <div class="legend">{{ bars('danger', 3, 'Detected') }}<span>Signs of manipulation detected</span>{% if any_suspicious %}{{ bars('warning', 2, 'Suspicious') }}<span>Suspicious</span>{% endif %}{{ bars('ok', 1, 'Not detected') }}<span>Not detected</span></div>
+  {% endif %}
+
+  {% if r.heatmap %}
+  <div class="split keep">
+    <div class="split-desc">
+      <div class="split-title">Detection Heatmap</div>
+      <p>Where the detectors that flagged this image found the strongest signals. Red areas had the most influence on the result.</p>
+    </div>
+    <div class="heatmap"><img src="{{ r.heatmap }}" alt="Detection heatmap"></div>
+  </div>
+  {% endif %}
+</section>
+
+{# ---------------- Context analysis ---------------- #}
+{% if r.context_rows %}
+<section class="block">
+  <h2>Context analysis</h2>
+  <table class="outcomes">
+    {% for o in r.context_rows %}
+    <tr><th>{{ state_icon(o.state) }}<span>{{ o.label }}</span></th><td>{{ o.text }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if r.sources %}
+  <div class="sources">
+    {% for s in r.sources %}
+    <div class="source">
+      <div class="source-site">{{ s.source or 'Web' }}</div>
+      <a href="{{ s.url }}">{{ s.title }}</a>
+      {% if s.date %}<div class="source-date">{{ s.date }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{# ---------------- Metadata analysis ---------------- #}
+{% if r.metadata %}
+<section class="block keep">
+  <h2>Metadata analysis</h2>
+  <div class="split">
+    <div class="split-desc">
+      <div class="split-title">Metadata signals</div>
+      <p>File-level signals that reveal how media was created, processed, or modified, including embedded AI and software markers.</p>
+    </div>
+    <div class="split-body">
+      {% if r.metadata.signals %}
+      <ul class="signals">{% for s in r.metadata.signals %}<li>{{ detected(true) }}<span>&ldquo;{{ s }}&rdquo;</span></li>{% endfor %}</ul>
+      {% else %}
+      <div class="signal-none">{{ detected(false) }}<span>No metadata signals to suggest this media has been manipulated.</span></div>
+      {% endif %}
+    </div>
+  </div>
+  {% if r.metadata.exif %}
+  <div class="split">
+    <div class="split-desc">
+      <div class="split-title">EXIF tags</div>
+      <p>Standard metadata recorded by cameras and editing software.</p>
+    </div>
+    <table class="kv">{% for f in r.metadata.exif %}<tr><th>{{ f.label }}</th><td>{{ f.value }}</td></tr>{% endfor %}</table>
+  </div>
+  {% endif %}
+  {% if r.metadata.c2pa %}
+  <div class="split">
+    <div class="split-desc">
+      <div class="split-title">C2PA indicators</div>
+      <p>Cryptographically verified content credentials that record a file's origin and edits.</p>
+    </div>
+    <div class="split-body">{% for c in r.metadata.c2pa %}<span class="tag">{{ c }}</span>{% endfor %}</div>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{# ---------------- Known limitations ---------------- #}
+<section class="block keep">
+  <h2>Known limitations</h2>
+  <p class="lede">Results represent probabilistic assessments based on multi-model ensemble analysis. Key limitations to note:</p>
+  <ul class="limits">{% for l in r.limitations %}<li>{{ l }}</li>{% endfor %}</ul>
+  {% if r.dashboard_url %}<p class="lede small">Reality Defender account holders can view the full analysis <a href="{{ r.dashboard_url }}">online</a>.</p>{% endif %}
+</section>
+
+</body>
+</html>

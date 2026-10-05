@@ -16,6 +16,9 @@ helping organizations protect against disinformation and maintain trust in their
 - **Real-time Analysis**: Analyze media files directly from Slack messages using the right-click context menu
 - **Multiple File Formats**: Supports JPG, JPEG, PNG, and MP4 files, among others.
 - **Asynchronous Processing**: Non-blocking analysis that allows continued Slack usage while processing
+- **PDF reports**: Each result is followed by a shareable PDF report in the thread (model breakdown, context
+  and metadata analysis, reverse image search matches)
+- **Report an issue**: Flag a false positive/negative or ask a question; it goes straight to Reality Defender
 
 ## Architecture
 
@@ -50,6 +53,8 @@ The application is built with:
    ```bash
    uv sync
    ```
+   PDF reports are rendered with WeasyPrint, which needs Pango (`brew install pango` on macOS; on
+   Apple Silicon also `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`). The Docker image installs it.
 
 3. **Set up environment variables**:
    ```bash
@@ -98,3 +103,7 @@ Defender keys in DynamoDB, with the RD keys encrypted via AWS KMS. Set the
 - Register your Reality Defender API key with the `/setup-rd <your key>` command.
 - Mention the bot with a supported social media link or an attached file, e.g. `@Reality Defender https://x.com/...` or `@Reality Defender` with a file attached.
 - Alternatively, click `More options` on any message containing supported media, then click `Analyze media`.
+- Open the PDF report posted under each result for the full breakdown, or click `Report an issue` to send feedback.
+
+Uploading the PDF report needs the `files:write` scope and the requester's name needs `users:read`; workspaces
+installed before these were added must reinstall the app to get reports.

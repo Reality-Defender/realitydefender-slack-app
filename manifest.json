@@ -44,7 +44,9 @@
         "remote_files:read",
         "channels:join",
         "app_mentions:read",
-        "links:read"
+        "links:read",
+        "files:write",
+        "users:read"
       ]
     }
   },

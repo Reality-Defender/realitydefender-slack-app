@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from reality_defender_slack_app.services.media import (
@@ -7,6 +8,16 @@ from reality_defender_slack_app.services.media import (
 
 _SUPPORTED_FILE_TYPES = ", ".join(f"`.{ext}`" for ext in supported_extensions())
 _SUPPORTED_SOCIAL_LINKS = ", ".join(f"`{d}`" for d in sorted(SOCIAL_MEDIA_DOMAINS))
+
+# Callback ID of the "Report an issue" form (handled in handlers/feedback.py).
+REPORT_VIEW_ID = "report_issue_modal"
+
+_REPORT_CHOICES = {
+    "false_positive": "It's real, but was flagged as manipulated",
+    "false_negative": "It's manipulated, but wasn't flagged",
+    "confirmation": "The result is correct",
+    "other": "Something else, or I have a question",
+}
 
 
 async def app_home_default(client: Any, event: Any) -> None:
@@ -168,6 +179,62 @@ async def notify_error_analysis_request(client: Any, trigger_id: str) -> None:
                         "text": "There has been an error while uploading a file for analysis.",
                     },
                 }
+            ],
+        },
+    )
+
+
+async def open_report_issue_modal(
+    client: Any, trigger_id: str, metadata: dict[str, Any]
+) -> None:
+    await client.views_open(
+        trigger_id=trigger_id,
+        view={
+            "type": "modal",
+            "callback_id": REPORT_VIEW_ID,
+            "private_metadata": json.dumps(metadata),
+            "title": {"type": "plain_text", "text": "Report an issue"},
+            "submit": {"type": "plain_text", "text": "Send"},
+            "close": {"type": "plain_text", "text": "Cancel"},
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Tell us what looks wrong with this result, or ask a "
+                        f"question.\nRequest ID `{metadata['request_id']}`",
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "issue",
+                    "label": {"type": "plain_text", "text": "What's the issue?"},
+                    "element": {
+                        "type": "radio_buttons",
+                        "action_id": "choice",
+                        "options": [
+                            {"text": {"type": "plain_text", "text": text}, "value": value}
+                            for value, text in _REPORT_CHOICES.items()
+                        ],
+                    },
+                },
+                {
+                    "type": "input",
+                    "block_id": "details",
+                    "optional": True,
+                    "label": {"type": "plain_text", "text": "Details or questions"},
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "text",
+                        "multiline": True,
+                        "max_length": 2000,
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "What do you know about this media? What would "
+                            "you like to ask us?",
+                        },
+                    },
+                },
             ],
         },
     )
