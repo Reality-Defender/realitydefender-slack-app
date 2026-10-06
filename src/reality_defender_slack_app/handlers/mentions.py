@@ -73,6 +73,8 @@ async def _process_mention(
             media=media,
             url=url,
             bot_token=context["bot_token"],
+            requester_id=event.get("user"),
+            message_ts=event.get("ts"),
         )
 
     except Exception:

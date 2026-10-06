@@ -51,4 +51,6 @@ def register_shortcut_handlers(app: AsyncApp, deps: Deps) -> None:
             media=media,
             url=url,
             bot_token=context["bot_token"],
+            requester_id=shortcut.get("user", {}).get("id"),
+            message_ts=message_ts,
         )

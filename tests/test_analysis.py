@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from reality_defender_slack_app.services import analysis
+from reality_defender_slack_app.services.reality_defender import Analysis
 
 
 @pytest.fixture
@@ -58,7 +59,9 @@ async def test_analyze_targets_file_downloads_then_analyzes(
     monkeypatch.setattr(analysis, "format_result", lambda *a, **k: "RESULT")
     client = AsyncMock()
     rd_client = AsyncMock()
-    rd_client.analyze_file_bytes = AsyncMock(return_value=("res", "media-1"))
+    rd_client.analyze_file_bytes = AsyncMock(
+        return_value=Analysis({"status": "AUTHENTIC"}, "req-1", "media-1", None)  # type: ignore[typeddict-item]
+    )
 
     await analysis.analyze_targets(
         client=client,

@@ -33,6 +33,9 @@ dependencies = [
     "pydantic-settings>=2.5.0",
     "realitydefender>=0.1.11",
     "boto3>=1.43.36",
+    "weasyprint>=66",
+    "jinja2>=3.1",
+    "pillow>=10",
 ]
 
 [project.scripts]

@@ -10,6 +10,7 @@ from slack_bolt.oauth.async_oauth_settings import AsyncOAuthSettings
 from reality_defender_slack_app.config import Settings, get_settings
 from reality_defender_slack_app.deps import Deps
 from reality_defender_slack_app.handlers.commands import register_command_handlers
+from reality_defender_slack_app.handlers.feedback import register_feedback_handlers
 from reality_defender_slack_app.handlers.home import register_home_handlers
 from reality_defender_slack_app.handlers.lifecycle import register_lifecycle_handlers
 from reality_defender_slack_app.handlers.mentions import register_mention_handlers
@@ -29,6 +30,8 @@ BOT_SCOPES = [
     "app_mentions:read",
     "links:read",
     "remote_files:read",
+    "files:write",  # upload the PDF report into the result thread
+    "users:read",  # requester's name on the PDF report
 ]
 
 
@@ -70,6 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_shortcut_handlers(bolt_app, deps)
     register_home_handlers(bolt_app, deps)
     register_lifecycle_handlers(bolt_app, deps)
+    register_feedback_handlers(bolt_app, deps)
 
     handler = AsyncSlackRequestHandler(bolt_app)
     api = FastAPI()
