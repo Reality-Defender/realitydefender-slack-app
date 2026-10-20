@@ -64,9 +64,16 @@ async def _fetch_raw(rd: RealityDefender, request_id: str) -> dict[str, Any] | N
 
 
 def _safe_filename(filename: str) -> str:
-    """Keep the user's filename (RD records it) but make it filesystem-safe."""
-    name = re.sub(r"[^\w.\- ]+", "_", Path(filename).name).strip(" .")
-    return name[:120] or "media"
+    """Keep the user's filename (RD records it) but make it filesystem-safe.
+
+    Only the stem is trimmed, so the extension the SDK checks survives.
+    """
+    name = re.sub(r"[^\w.\- ]+", "_", Path(filename).name).strip(" ")
+    stem, dot, ext = name.rpartition(".")
+    if not dot:
+        stem, ext = ext, ""
+    stem = stem.strip(" .")[:120] or "media"
+    return f"{stem}.{ext}" if ext else stem
 
 
 class RDClient:

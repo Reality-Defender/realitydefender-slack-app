@@ -1,8 +1,11 @@
+import base64
+import io
 from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from PIL import Image
 
 from reality_defender_slack_app.services import analysis, report
 from reality_defender_slack_app.services.formatting import format_result
@@ -141,6 +144,64 @@ def test_slack_result_hides_score_when_only_context_flagged() -> None:
         "models": [{"name": "rd-elm-img", "status": "MANIPULATED"}],
     }
     assert "`82%` confidence" in format_result(flagged_by_model, "photo.webp")
+
+
+def test_slack_result_keeps_score_when_authentic() -> None:
+    # Context-aware models only matter for a flagged verdict.
+    authentic = {
+        "status": "AUTHENTIC",
+        "score": 0.12,
+        "models": [
+            {"name": "rd-elm-img", "status": "AUTHENTIC"},
+            {"name": "rd-context-img", "status": "SUSPICIOUS"},
+        ],
+    }
+    assert "`12%` confidence" in format_result(authentic, "photo.webp")
+
+
+def _png(size: tuple[int, int] = (100, 100)) -> bytes:
+    out = io.BytesIO()
+    Image.new("RGB", size, "white").save(out, format="PNG")
+    return out.getvalue()
+
+
+def test_face_box_color_follows_verdict_tone() -> None:
+    uri = report.to_data_uri(_png(), boxes=[(10, 10, 90, 90)], box_status="MANIPULATED")
+    assert uri is not None
+    body = base64.b64decode(uri.split(",", 1)[1])
+    r, g, _ = Image.open(io.BytesIO(body)).convert("RGB").getpixel((10, 50))
+    assert r > 180 and g < 100  # red, not the authentic green
+
+
+@pytest.mark.asyncio
+async def test_face_boxes_only_on_original_upload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    aggregation = b'{"bboxes": [{"faceboxes": [10, 10, 90, 90, 0.9]}]}'
+
+    async def get_bytes(session: Any, url: str) -> bytes:
+        return aggregation if url == "agg" else _png()
+
+    seen: list[Any] = []
+
+    def to_data_uri(image_bytes: bytes, **kwargs: Any) -> str:
+        seen.append(kwargs)
+        return "data:"
+
+    monkeypatch.setattr(report, "_get_bytes", get_bytes)
+    monkeypatch.setattr(report, "to_data_uri", to_data_uri)
+    raw = {
+        **_raw("FAKE"),
+        "thumbnail": "thumb",
+        "modelMetadataUrl": "agg",
+    }
+
+    await report._collect_evidence(raw, media_bytes=None)
+    await report._collect_evidence(raw, media_bytes=_png())
+
+    assert seen[0]["boxes"] == []  # RD's thumbnail
+    assert seen[1]["boxes"] == [(10, 10, 90, 90)]
+    assert seen[1]["box_status"] == "FAKE"
 
 
 @pytest.mark.asyncio

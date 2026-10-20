@@ -27,7 +27,12 @@ import aiohttp
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance
 
-from reality_defender_slack_app.services.formatting import DASHBOARD_BASE
+from reality_defender_slack_app.services.formatting import (
+    DASHBOARD_BASE,
+    is_context_model,
+    is_ensemble_model,
+    verdict_basis,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +57,6 @@ STATUS_TONES = {
     "AUTHENTIC": "ok",
 }
 CONCLUSIVE_STATUSES = frozenset(STATUS_TONES)
-FLAGGED_STATUSES = frozenset({"FAKE", "MANIPULATED", "SUSPICIOUS"})
 
 _MEDIA_NOUNS = {"IMAGE": "image", "VIDEO": "video", "AUDIO": "audio", "TEXT": "text"}
 _KIND_TITLES = {
@@ -97,11 +101,12 @@ FETCH_TIMEOUT_SECONDS = 20
 # Cap embedded images so a 50 MB upload doesn't become a 50 MB PDF.
 MAX_IMAGE_EDGE_PX = 1400
 MAX_AGGREGATION_BYTES = 5 * 1024 * 1024
-# Face-box colors, matching the web app: green for authentic, red for flagged.
+# Face-box colors by verdict tone, matching the web app: green for authentic,
+# red for flagged.
 _BOX_COLORS = {
-    "FAKE": (217, 58, 43),
-    "SUSPICIOUS": (240, 165, 49),
-    "AUTHENTIC": (110, 214, 110),
+    "danger": (217, 58, 43),
+    "warning": (240, 165, 49),
+    "ok": (110, 214, 110),
 }
 MIN_FACE_CONFIDENCE = 0.5
 HEATMAP_COLOR = (217, 58, 43)
@@ -136,11 +141,11 @@ class Detector:
 
     @property
     def is_ensemble(self) -> bool:
-        return self.slug.endswith("ensemble")
+        return is_ensemble_model(self.slug)
 
     @property
     def is_context(self) -> bool:
-        return self.slug.startswith("rd-context-")
+        return is_context_model(self.slug)
 
 
 @dataclass
@@ -247,7 +252,7 @@ def build_report(
     media_type = str(raw.get("mediaType") or "").upper() or "MEDIA"
     noun = _MEDIA_NOUNS.get(media_type, "media")
     summary_block = raw.get("resultsSummary") or {}
-    status = str(summary_block.get("status") or raw.get("overallStatus") or "UNKNOWN")
+    status = overall_status(raw)
     score = _as_score((summary_block.get("metadata") or {}).get("finalScore"))
     is_conclusive = status in CONCLUSIVE_STATUSES
     request_id = str(raw.get("requestId") or "unknown")
@@ -256,7 +261,9 @@ def build_report(
     detectors = _detectors(raw.get("models") or [])
     sources = _sources(raw.get("models") or [])
     metadata = _metadata(aggregation)
-    basis = verdict_basis(status, detectors, metadata)
+    basis = verdict_basis(
+        status, raw.get("models") or [], bool(metadata and metadata.detected)
+    )
 
     return Report(
         request_id=request_id,
@@ -330,6 +337,12 @@ def fmt_time(value: Any) -> str | None:
 
 
 # --- report sections -------------------------------------------------------
+
+
+def overall_status(raw: dict[str, Any]) -> str:
+    """The scan's verdict: resultsSummary.status, else overallStatus."""
+    summary_block = raw.get("resultsSummary") or {}
+    return str(summary_block.get("status") or raw.get("overallStatus") or "UNKNOWN")
 
 
 def model_state(status: str) -> str:
@@ -414,33 +427,6 @@ def _metadata(aggregation: dict[str, Any] | None) -> Metadata | None:
         c2pa=[str(i) for i in prov.get("c2pa_indicators") or [] if i],
         detected=prov.get("is_generated") is True or bool(signals),
     )
-
-
-def verdict_basis(
-    status: str, detectors: list[Detector], metadata: Metadata | None
-) -> str:
-    """What a flagged verdict rests on: "models", "context", "metadata" or both.
-
-    RD's overall score for a verdict driven only by context-aware or metadata
-    analysis is that one signal's score (e.g. the context model's 82 while every
-    detection model scored 1-4), so it isn't shown as a likelihood.
-    """
-    if status not in FLAGGED_STATUSES:
-        return "models"
-    detection = [d for d in detectors if not d.is_ensemble and not d.is_context]
-    if any(model_state(d.status) != "not_detected" for d in detection):
-        return "models"
-    context = any(
-        d.is_context and model_state(d.status) != "not_detected" for d in detectors
-    )
-    meta = bool(metadata and metadata.detected)
-    if context and meta:
-        return "context_metadata"
-    if context:
-        return "context"
-    if meta:
-        return "metadata"
-    return "models"
 
 
 def _conclusion_label(status: str) -> str:
@@ -751,7 +737,7 @@ def to_data_uri(
             opened.load()
             img: Image.Image = opened
             if boxes:
-                color = _BOX_COLORS.get(box_status or "", _BOX_COLORS["AUTHENTIC"])
+                color = _BOX_COLORS[STATUS_TONES.get(box_status or "", "ok")]
                 img = _draw_boxes(img, boxes, source_size, color)
             has_alpha = img.mode in ("RGBA", "LA") or "transparency" in img.info
             img.thumbnail((MAX_IMAGE_EDGE_PX, MAX_IMAGE_EDGE_PX))
@@ -818,7 +804,8 @@ async def _collect_evidence(
     # Signed S3 URLs carry their own auth, so no RD credentials are sent.
     timeout = aiohttp.ClientTimeout(total=FETCH_TIMEOUT_SECONDS)
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        if media_bytes and media_type == "IMAGE":
+        use_original = bool(media_bytes) and media_type == "IMAGE"
+        if use_original:
             preview_src = _given()
         elif raw.get("thumbnail"):
             preview_src = _get_bytes(session, raw["thumbnail"])
@@ -845,14 +832,14 @@ async def _collect_evidence(
         heatmap = await asyncio.to_thread(heatmap_overlay, preview_bytes, bodies)
     if preview_bytes:
         # Face boxes are in the analyzed image's pixels; only draw them on the
-        # original image, where that mapping holds.
-        boxes, size = face_boxes(aggregation) if media_type == "IMAGE" else ([], None)
+        # original image, where that mapping holds (not on RD's thumbnail).
+        boxes, size = face_boxes(aggregation) if use_original else ([], None)
         preview = await asyncio.to_thread(
             to_data_uri,
             preview_bytes,
             boxes=boxes,
             source_size=size,
-            box_status=str(raw.get("overallStatus") or ""),
+            box_status=overall_status(raw),
         )
     return aggregation, preview, heatmap
 

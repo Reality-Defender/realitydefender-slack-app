@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from collections.abc import Awaitable
@@ -154,8 +155,10 @@ async def _post_result(
         logger.exception("Failed to build or upload report for %s", analysis.request_id)
 
 
-async def _lookup(call: Awaitable[Any]) -> Any:
-    """Await a Slack API call, returning None if it fails."""
+async def _lookup(call: Awaitable[Any] | None) -> Any:
+    """Await a Slack API call, returning None if it fails or there's no call."""
+    if call is None:
+        return None
     try:
         return await call
     except Exception:
@@ -176,22 +179,27 @@ async def analyze_targets(
     requester_id: str | None = None,
     message_ts: str | None = None,
 ) -> None:
-    
-    # Who/where for the report cover, looked up once and shared by every target
-    # in the message; each lookup is optional.
-    auth = await _lookup(client.auth_test())
-    workspace_name = auth.get("team") if auth else None
-    requested_by = None
-    if requester_id:
-        user = await _lookup(client.users_info(user=requester_id))
-        profile = user["user"]["profile"] if user else {}
-        requested_by = profile.get("real_name") or profile.get("display_name")
-    message_permalink = None
-    if message_ts:
-        link = await _lookup(
+    """Fan out analysis for the media and/or social URL found at an entrypoint.
+
+    Shared by every Slack entrypoint (mention, message shortcut): each file
+    is downloaded and analyzed in the background and the URL, if any, is analyzed
+    in the background. An hourglass ack is posted per target into the thread.
+    """
+    # Who/where for the report cover, looked up once (concurrently) and shared
+    # by every target in the message; each lookup is optional.
+    auth, user, link = await asyncio.gather(
+        _lookup(client.auth_test()),
+        _lookup(client.users_info(user=requester_id) if requester_id else None),
+        _lookup(
             client.chat_getPermalink(channel=channel_id, message_ts=message_ts)
-        )
-        message_permalink = link.get("permalink") if link else None
+            if message_ts
+            else None
+        ),
+    )
+    workspace_name = auth.get("team") if auth else None
+    profile = user["user"]["profile"] if user else {}
+    requested_by = profile.get("real_name") or profile.get("display_name")
+    message_permalink = link.get("permalink") if link else None
 
     for file_url, name in media:
         spawn(
