@@ -1,7 +1,7 @@
 import base64
 import io
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
@@ -169,7 +169,8 @@ def test_face_box_color_follows_verdict_tone() -> None:
     uri = report.to_data_uri(_png(), boxes=[(10, 10, 90, 90)], box_status="MANIPULATED")
     assert uri is not None
     body = base64.b64decode(uri.split(",", 1)[1])
-    r, g, _ = Image.open(io.BytesIO(body)).convert("RGB").getpixel((10, 50))
+    pixel = Image.open(io.BytesIO(body)).convert("RGB").getpixel((10, 50))
+    r, g, _ = cast("tuple[int, int, int]", pixel)
     assert r > 180 and g < 100  # red, not the authentic green
 
 
