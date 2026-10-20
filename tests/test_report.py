@@ -150,9 +150,7 @@ async def test_result_posts_then_uploads_pdf(
     render = AsyncMock(return_value=(b"%PDF", "RD-Report_a.pdf"))
     monkeypatch.setattr(analysis, "render_report", render)
     client = AsyncMock()
-    client.users_info.return_value = {"user": {"profile": {"real_name": "Jane Doe"}}}
-    client.auth_test.return_value = {"team": "Acme"}
-    client.chat_getPermalink.return_value = {"permalink": "https://p"}
+    context = _ctx()
     result = {"status": "AUTHENTIC", "score": 0.04, "models": []}
 
     await analysis._post_result(
@@ -161,19 +159,12 @@ async def test_result_posts_then_uploads_pdf(
         thread_ts="1.1",
         reply="RESULT",
         analysis=Analysis(result, "req-1", "m-1", {"requestId": "req-1"}),  # type: ignore[arg-type]
-        context=_ctx(),
-        requester_id="U1",
-        message_ts="1.1",
+        context=context,
     )
 
     posted = client.chat_postMessage.call_args.kwargs
     assert posted["text"] == "RESULT"
-    ctx = render.call_args.args[1]
-    assert (ctx.requested_by, ctx.workspace_name, ctx.message_permalink) == (
-        "Jane Doe",
-        "Acme",
-        "https://p",
-    )
+    assert render.call_args.args[1] is context
     upload = client.files_upload_v2.call_args.kwargs
     assert upload["thread_ts"] == "1.1"
     assert upload["file"] == b"%PDF"
@@ -186,7 +177,6 @@ async def test_report_failure_keeps_the_result(monkeypatch: pytest.MonkeyPatch) 
         analysis, "render_report", AsyncMock(side_effect=OSError("pango"))
     )
     client = AsyncMock()
-    client.auth_test.return_value = {"team": "Acme"}
 
     await analysis._post_result(
         client=client,
@@ -195,8 +185,6 @@ async def test_report_failure_keeps_the_result(monkeypatch: pytest.MonkeyPatch) 
         reply="RESULT",
         analysis=Analysis({"status": "AUTHENTIC"}, "req-1", None, {}),  # type: ignore[typeddict-item]
         context=_ctx(),
-        requester_id=None,
-        message_ts=None,
     )
 
     client.chat_postMessage.assert_awaited_once()

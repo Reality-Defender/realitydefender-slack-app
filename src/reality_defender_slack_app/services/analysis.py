@@ -25,11 +25,19 @@ async def analyze_url_and_post(
     channel_id: str,
     thread_ts: str,
     url: str,
-    requester_id: str | None = None,
-    message_ts: str | None = None,
+    requested_by: str | None = None,
+    workspace_name: str | None = None,
+    message_permalink: str | None = None,
 ) -> None:
     """Analyze a social media URL and post the result into the message thread."""
-    context = ScanContext("social", url, datetime.now(timezone.utc))
+    context = ScanContext(
+        "social",
+        url,
+        datetime.now(timezone.utc),
+        requested_by=requested_by,
+        workspace_name=workspace_name,
+        message_permalink=message_permalink,
+    )
     analysis = None
     try:
         analysis = await rd_client.analyze_url(api_key, url)
@@ -48,8 +56,6 @@ async def analyze_url_and_post(
         reply=reply,
         analysis=analysis,
         context=context,
-        requester_id=requester_id,
-        message_ts=message_ts,
     )
 
 
@@ -63,8 +69,9 @@ async def analyze_slack_file_and_post(
     file_url: str,
     name: str,
     bot_token: str,
-    requester_id: str | None = None,
-    message_ts: str | None = None,
+    requested_by: str | None = None,
+    workspace_name: str | None = None,
+    message_permalink: str | None = None,
 ) -> None:
     """Download a Slack file, post an analyzing ack, then analyze and post results."""
     requested_at = datetime.now(timezone.utc)
@@ -80,10 +87,16 @@ async def analyze_slack_file_and_post(
         text=f":hourglass_flowing_sand: Analyzing `{name}`...",
     )
 
-    # Hash of the exact bytes scanned, so the verdict can be tied to this file
-    # even after it's re-shared or renamed.
+    # SHA-256 of the exact bytes scanned, printed on the report so a copy of the
+    # file can be matched to this verdict even if the Slack message is gone.
     context = ScanContext(
-        "upload", name, requested_at, sha256=hashlib.sha256(content).hexdigest()
+        "upload",
+        name,
+        requested_at,
+        requested_by=requested_by,
+        workspace_name=workspace_name,
+        message_permalink=message_permalink,
+        sha256=hashlib.sha256(content).hexdigest(),
     )
     analysis = None
     try:
@@ -103,8 +116,6 @@ async def analyze_slack_file_and_post(
         reply=reply,
         analysis=analysis,
         context=context,
-        requester_id=requester_id,
-        message_ts=message_ts,
         media_bytes=content,
     )
 
@@ -117,8 +128,6 @@ async def _post_result(
     reply: str,
     analysis: Analysis | None,
     context: ScanContext,
-    requester_id: str | None,
-    message_ts: str | None,
     media_bytes: bytes | None = None,
 ) -> None:
     """Post the result, then the PDF report.
@@ -131,19 +140,6 @@ async def _post_result(
         return
 
     try:
-        # Who/where for the report cover; each lookup is optional.
-        auth = await _lookup(client.auth_test())
-        context.workspace_name = auth.get("team") if auth else None
-        if requester_id:
-            user = await _lookup(client.users_info(user=requester_id))
-            profile = user["user"]["profile"] if user else {}
-            context.requested_by = profile.get("real_name") or profile.get("display_name")
-        if message_ts:
-            link = await _lookup(
-                client.chat_getPermalink(channel=channel_id, message_ts=message_ts)
-            )
-            context.message_permalink = link.get("permalink") if link else None
-
         pdf, filename = await render_report(
             analysis.raw, context, media_id=analysis.media_id, media_bytes=media_bytes
         )
@@ -180,12 +176,23 @@ async def analyze_targets(
     requester_id: str | None = None,
     message_ts: str | None = None,
 ) -> None:
-    """Fan out analysis for the media and/or social URL found at an entrypoint.
+    
+    # Who/where for the report cover, looked up once and shared by every target
+    # in the message; each lookup is optional.
+    auth = await _lookup(client.auth_test())
+    workspace_name = auth.get("team") if auth else None
+    requested_by = None
+    if requester_id:
+        user = await _lookup(client.users_info(user=requester_id))
+        profile = user["user"]["profile"] if user else {}
+        requested_by = profile.get("real_name") or profile.get("display_name")
+    message_permalink = None
+    if message_ts:
+        link = await _lookup(
+            client.chat_getPermalink(channel=channel_id, message_ts=message_ts)
+        )
+        message_permalink = link.get("permalink") if link else None
 
-    Shared by every Slack entrypoint (mention, message shortcut): each file
-    is downloaded and analyzed in the background and the URL, if any, is analyzed
-    in the background. An hourglass ack is posted per target into the thread.
-    """
     for file_url, name in media:
         spawn(
             analyze_slack_file_and_post(
@@ -197,8 +204,9 @@ async def analyze_targets(
                 file_url=file_url,
                 name=name,
                 bot_token=bot_token,
-                requester_id=requester_id,
-                message_ts=message_ts,
+                requested_by=requested_by,
+                workspace_name=workspace_name,
+                message_permalink=message_permalink,
             )
         )
 
@@ -216,7 +224,8 @@ async def analyze_targets(
                 channel_id=channel_id,
                 thread_ts=thread_ts,
                 url=url,
-                requester_id=requester_id,
-                message_ts=message_ts,
+                requested_by=requested_by,
+                workspace_name=workspace_name,
+                message_permalink=message_permalink,
             )
         )

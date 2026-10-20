@@ -3,7 +3,7 @@ from __future__ import annotations
 import html
 import re
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -58,9 +58,6 @@ _MIMETYPE_EXTENSIONS = {
 # The bot token is only ever sent to Slack's private file host.
 SLACK_FILE_HOST = "files.slack.com"
 
-# Share-tracking parameters added by social apps; they don't identify the post.
-_TRACKING_PARAMS = ("igsh", "stkn", "si", "fbclid", "gclid", "mibextid")
-
 # Slack file downloads can be large; cap how long we wait on the transfer.
 DOWNLOAD_TIMEOUT_SECONDS = 60
 
@@ -79,19 +76,8 @@ def is_social_url(url: str) -> bool:
 
 
 def clean_social_url(url: str) -> str:
-    """Undo Slack's HTML escaping and drop share-tracking query parameters.
-
-    Slack sends `&` as `&amp;` in message text; passed through as-is it corrupts
-    every link with more than one parameter (e.g. YouTube `watch?v=...&t=...`).
-    Parameters that identify the content (like YouTube's `v`) are kept.
-    """
-    parsed = urlparse(html.unescape(url))
-    kept = [
-        (k, v)
-        for k, v in parse_qsl(parsed.query, keep_blank_values=True)
-        if not k.lower().startswith("utm_") and k.lower() not in _TRACKING_PARAMS
-    ]
-    return urlunparse(parsed._replace(query=urlencode(kept)))
+    """Undo Slack's HTML escaping (`&amp;` -> `&`) so multi-parameter links survive."""
+    return html.unescape(url)
 
 
 def extract_social_url(text: str) -> str | None:
