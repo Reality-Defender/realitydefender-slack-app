@@ -10,7 +10,7 @@ from typing import Any, NamedTuple
 
 from realitydefender import RealityDefender
 from realitydefender.detection.results import get_media_result
-from realitydefender.model import DetectionResult, FeedbackLabel, UserFeedbackCategory
+from realitydefender.model import DetectionResult
 
 logger = logging.getLogger(__name__)
 
@@ -107,17 +107,3 @@ class RDClient:
                 )
                 raw = await _fetch_raw(rd, upload["request_id"])
                 return Analysis(result, upload["request_id"], upload.get("media_id"), raw)
-
-    async def submit_feedback(
-        self,
-        api_key: str,
-        request_id: str,
-        *,
-        label: FeedbackLabel,
-        category: UserFeedbackCategory,
-        comment: str | None = None,
-    ) -> None:
-        """Report a false positive/negative, a confirmation, or a question on a scan."""
-        async with _rd_session(api_key) as rd:
-            logger.info("Submitting %s feedback for %s", category, request_id)
-            await rd.create_user_feedback(request_id, label, category, comment=comment)

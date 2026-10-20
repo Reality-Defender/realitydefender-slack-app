@@ -144,7 +144,7 @@ def test_slack_result_hides_score_when_only_context_flagged() -> None:
 
 
 @pytest.mark.asyncio
-async def test_result_posts_button_then_uploads_pdf(
+async def test_result_posts_then_uploads_pdf(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     render = AsyncMock(return_value=(b"%PDF", "RD-Report_a.pdf"))
@@ -168,8 +168,6 @@ async def test_result_posts_button_then_uploads_pdf(
 
     posted = client.chat_postMessage.call_args.kwargs
     assert posted["text"] == "RESULT"
-    assert posted["blocks"][0]["text"]["text"] == "RESULT"
-    assert posted["blocks"][1]["elements"][0]["action_id"] == "report_issue"
     ctx = render.call_args.args[1]
     assert (ctx.requested_by, ctx.workspace_name, ctx.message_permalink) == (
         "Jane Doe",

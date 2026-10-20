@@ -9,7 +9,7 @@ from typing import Any
 from realitydefender.errors import RealityDefenderError
 
 from reality_defender_slack_app.background import spawn
-from reality_defender_slack_app.services.formatting import format_result, result_blocks
+from reality_defender_slack_app.services.formatting import format_result
 from reality_defender_slack_app.services.media import download_slack_file
 from reality_defender_slack_app.services.reality_defender import Analysis, RDClient
 from reality_defender_slack_app.services.report import ScanContext, render_report
@@ -121,22 +121,13 @@ async def _post_result(
     message_ts: str | None,
     media_bytes: bytes | None = None,
 ) -> None:
-    """Post the result with its "Report an issue" button, then the PDF report.
+    """Post the result, then the PDF report.
 
     The PDF is a follow-up upload in the same thread; if it can't be built the
     result message stands on its own.
     """
-    if analysis is None:
-        await client.chat_postMessage(channel=channel_id, thread_ts=thread_ts, text=reply)
-        return
-
-    await client.chat_postMessage(
-        channel=channel_id,
-        thread_ts=thread_ts,
-        text=reply,
-        blocks=result_blocks(reply, analysis.request_id, analysis.result["status"]),
-    )
-    if analysis.raw is None:
+    await client.chat_postMessage(channel=channel_id, thread_ts=thread_ts, text=reply)
+    if analysis is None or analysis.raw is None:
         return
 
     try:

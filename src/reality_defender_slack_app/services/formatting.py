@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from typing import Any
 
 DASHBOARD_BASE = "https://app.realitydefender.ai/media"
-
-# Action ID of the "Report an issue" button (handled in handlers/feedback.py).
-REPORT_ACTION_ID = "report_issue"
 
 _FLAGGED = {"MANIPULATED", "SUSPICIOUS"}
 
@@ -48,21 +44,3 @@ def _context_only(result: Mapping[str, Any]) -> bool:
         for m in models
     )
     return context and not detection
-
-
-def result_blocks(text: str, request_id: str, status: str) -> list[dict[str, Any]]:
-    """The result text as-is, with a "Report an issue" button under it."""
-    return [
-        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
-        {
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "action_id": REPORT_ACTION_ID,
-                    "text": {"type": "plain_text", "text": "Report an issue"},
-                    "value": json.dumps({"request_id": request_id, "status": status}),
-                }
-            ],
-        },
-    ]
