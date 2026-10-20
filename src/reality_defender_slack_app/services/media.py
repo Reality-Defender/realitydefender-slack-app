@@ -3,7 +3,7 @@ from __future__ import annotations
 import html
 import re
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import aiohttp
 
@@ -55,11 +55,8 @@ _MIMETYPE_EXTENSIONS = {
     "audio/ogg": "ogg",
 }
 
-# The bot token is only ever sent to Slack's private file host. Redirects are
-# followed only within Slack's own domains, without the token.
+# The bot token is only ever sent to Slack's private file host.
 SLACK_FILE_HOST = "files.slack.com"
-SLACK_CDN_DOMAINS = ("slack.com", "slack-edge.com", "slack-files.com")
-MAX_REDIRECTS = 3
 
 # Share-tracking parameters added by social apps; they don't identify the post.
 _TRACKING_PARAMS = ("igsh", "stkn", "si", "fbclid", "gclid", "mibextid")
@@ -117,60 +114,27 @@ def collect_media(message: dict[str, Any]) -> list[tuple[str, str]]:
     for file in message.get("files", []):
         if file.get("mimetype", "") in SUPPORTED_MIMETYPES:
             url = file.get("url_private_download") or file.get("url_private")
-            if url and is_slack_file_url(url):
+            if url:
                 media.append((url, file.get("name") or "media"))
 
-    # Image blocks can point anywhere (another app or webhook sets image_url),
-    # so only Slack-hosted images are collected; the bot token is only ever
-    # sent to Slack's file host.
     for block in message.get("blocks", []):
         if block.get("type") == "image":
-            for url in (block.get("slack_file", {}).get("url"), block.get("image_url")):
-                if url and is_slack_file_url(url):
-                    media.append((url, "image"))
-                    break
+            url = block.get("image_url") or block.get("slack_file", {}).get("url")
+            if url:
+                media.append((url, "image"))
 
     return media
 
 
-def _host(url: str) -> str:
-    parsed = urlparse(url)
-    return (parsed.hostname or "").lower() if parsed.scheme == "https" else ""
-
-
-def is_slack_file_url(url: str) -> bool:
-    """True for Slack private file URLs (the only place the bot token may go)."""
-    return _host(url) == SLACK_FILE_HOST
-
-
-def _is_slack_cdn_url(url: str) -> bool:
-    host = _host(url)
-    return any(host == h or host.endswith("." + h) for h in SLACK_CDN_DOMAINS)
-
-
 async def download_slack_file(url: str, bot_token: str) -> bytes:
-    """Download a Slack private file using the workspace's bot token.
-
-    Refuses anything but Slack's file host, follows redirects by hand so the
-    token is never carried to another host, and only follows redirects that
-    stay on Slack's own domains.
-    """
-    if not is_slack_file_url(url):
-        raise ValueError(f"Refusing to download a non-Slack file URL: {_host(url) or url}")
-
+    """Download a Slack private file using the workspace's bot token."""
     timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT_SECONDS)
+    headers = (
+        {"Authorization": f"Bearer {bot_token}"}
+        if urlparse(url).hostname == SLACK_FILE_HOST
+        else {}
+    )
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        for _ in range(MAX_REDIRECTS + 1):
-            headers = {"Authorization": f"Bearer {bot_token}"} if is_slack_file_url(url) else {}
-            async with session.get(url, headers=headers, allow_redirects=False) as resp:
-                if resp.status in (301, 302, 303, 307, 308):
-                    location = urljoin(url, resp.headers.get("Location", ""))
-                    if not _is_slack_cdn_url(location):
-                        raise ValueError(
-                            f"Refusing redirect off Slack's domains: {_host(location) or location}"
-                        )
-                    url = location
-                    continue
-                resp.raise_for_status()
-                return await resp.read()
-    raise ValueError("Too many redirects downloading Slack file")
+        async with session.get(url, headers=headers) as resp:
+            resp.raise_for_status()
+            return await resp.read()

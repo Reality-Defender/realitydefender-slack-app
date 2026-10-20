@@ -10,7 +10,6 @@ from reality_defender_slack_app.handlers import shortcuts
 from reality_defender_slack_app.services import media
 from tests.helpers import HandlerRecorder, make_deps
 
-U1 = "https://files.slack.com/files-pri/T1-F1/a.png"
 CONTEXT = {"team_id": "T1", "bot_token": "xoxb"}
 
 
@@ -23,10 +22,10 @@ def _handler(deps: Deps) -> Callable[..., Any]:
 def test_collect_media_includes_supported_file() -> None:
     message = {
         "files": [
-            {"mimetype": "image/png", "url_private_download": U1, "name": "a.png"}
+            {"mimetype": "image/png", "url_private_download": "u1", "name": "a.png"}
         ]
     }
-    assert media.collect_media(message) == [(U1, "a.png")]
+    assert media.collect_media(message) == [("u1", "a.png")]
 
 
 def test_collect_media_skips_unsupported_file() -> None:
@@ -35,19 +34,8 @@ def test_collect_media_skips_unsupported_file() -> None:
 
 
 def test_collect_media_includes_image_block() -> None:
-    message = {"blocks": [{"type": "image", "image_url": U1}]}
-    assert media.collect_media(message) == [(U1, "image")]
-
-
-def test_collect_media_skips_non_slack_urls() -> None:
-    # The bot token is only ever sent to Slack's file host.
-    message = {
-        "files": [
-            {"mimetype": "image/png", "url_private": "https://evil.test/a.png", "name": "a"}
-        ],
-        "blocks": [{"type": "image", "image_url": "https://evil.test/b.png"}],
-    }
-    assert media.collect_media(message) == []
+    message = {"blocks": [{"type": "image", "image_url": "img1"}]}
+    assert media.collect_media(message) == [("img1", "image")]
 
 
 def test_extract_social_url_unescapes_and_strips_tracking() -> None:
@@ -116,7 +104,7 @@ async def test_shortcut_with_file_calls_analyze_targets(
     handler = _handler(make_deps(shared_key="k"))
     client = AsyncMock()
     message = {
-        "files": [{"mimetype": "image/png", "url_private_download": U1, "name": "a.png"}]
+        "files": [{"mimetype": "image/png", "url_private_download": "u1", "name": "a.png"}]
     }
 
     await handler(
@@ -124,7 +112,7 @@ async def test_shortcut_with_file_calls_analyze_targets(
     )
 
     analyze.assert_awaited_once()
-    assert analyze.call_args.kwargs["media"] == [(U1, "a.png")]
+    assert analyze.call_args.kwargs["media"] == [("u1", "a.png")]
     assert analyze.call_args.kwargs["thread_ts"] == "1.1"
 
 

@@ -7,7 +7,6 @@ from reality_defender_slack_app.handlers import mentions
 from reality_defender_slack_app.services.keys import SETUP_REQUIRED_MESSAGE
 from tests.helpers import make_deps
 
-U1 = "https://files.slack.com/files-pri/T1-F1/a.png"
 CONTEXT = {"team_id": "T1", "bot_token": "xoxb"}
 
 
@@ -79,11 +78,11 @@ async def test_mention_with_social_url_calls_analyze_targets(analyze: AsyncMock)
 async def test_mention_with_file_calls_analyze_targets(analyze: AsyncMock) -> None:
     client = AsyncMock()
     event = _event(
-        files=[{"mimetype": "image/png", "url_private_download": U1, "name": "a.png"}]
+        files=[{"mimetype": "image/png", "url_private_download": "u1", "name": "a.png"}]
     )
     await mentions._process_mention(make_deps(shared_key="k"), client, CONTEXT, event)
     analyze.assert_awaited_once()
-    assert analyze.call_args.kwargs["media"] == [(U1, "a.png")]
+    assert analyze.call_args.kwargs["media"] == [("u1", "a.png")]
     assert analyze.call_args.kwargs["url"] is None
 
 
