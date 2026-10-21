@@ -1,35 +1,47 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from enum import StrEnum
 from typing import Any
 
 DASHBOARD_BASE = "https://app.realitydefender.ai/media"
 
-# Statuses RD reports for a scan and for each model. Raw media records say FAKE;
-# the SDK's DetectionResult renames it MANIPULATED.
-FAKE = "FAKE"
-MANIPULATED = "MANIPULATED"
-SUSPICIOUS = "SUSPICIOUS"
-AUTHENTIC = "AUTHENTIC"
-NOT_APPLICABLE = "NOT_APPLICABLE"
-UNABLE_TO_EVALUATE = "UNABLE_TO_EVALUATE"
-ANALYZING = "ANALYZING"
-DOWNLOADING = "DOWNLOADING"
-DOWNLOAD_FAILED = "DOWNLOAD_FAILED"
-# Ours, not RD's: used when a result carries no status at all.
-UNKNOWN = "UNKNOWN"
 
-FLAGGED_STATUSES = frozenset({FAKE, MANIPULATED, SUSPICIOUS})
+class MediaOverallStatus(StrEnum):
+    # Statuses RD reports for a scan and for each model. Raw media records say FAKE;
+    # the SDK's DetectionResult renames it MANIPULATED.
+    FAKE = "FAKE"
+    MANIPULATED = "MANIPULATED"
+    SUSPICIOUS = "SUSPICIOUS"
+    AUTHENTIC = "AUTHENTIC"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    UNABLE_TO_EVALUATE = "UNABLE_TO_EVALUATE"
+    ANALYZING = "ANALYZING"
+    DOWNLOADING = "DOWNLOADING"
+    DOWNLOAD_FAILED = "DOWNLOAD_FAILED"
+    # Ours, not RD's: used when a result carries no status at all.
+    UNKNOWN = "UNKNOWN"
+
+
+FLAGGED_STATUSES = frozenset(
+    {
+        MediaOverallStatus.FAKE,
+        MediaOverallStatus.MANIPULATED,
+        MediaOverallStatus.SUSPICIOUS,
+    }
+)
 
 STATUS_EMOJI = {
-    AUTHENTIC: ":white_check_mark:",
-    MANIPULATED: ":warning:",
-    UNKNOWN: ":grey_question:",
+    MediaOverallStatus.AUTHENTIC: ":white_check_mark:",
+    MediaOverallStatus.MANIPULATED: ":warning:",
+    MediaOverallStatus.UNKNOWN: ":grey_question:",
 }
 
 
-def format_result(result: Mapping[str, Any], label: str, media_id: str | None = None) -> str:
-    status = result.get("status", UNKNOWN)
+def format_result(
+    result: Mapping[str, Any], label: str, media_id: str | None = None
+) -> str:
+    status = result.get("status", MediaOverallStatus.UNKNOWN)
     score = result.get("score")
     emoji = STATUS_EMOJI.get(status, ":grey_question:")
 
@@ -40,7 +52,9 @@ def format_result(result: Mapping[str, Any], label: str, media_id: str | None = 
     lines = [f"{emoji} *{status}*  {confidence}\nSource: `{label}`"]
 
     if media_id:
-        lines.append(f"\n<{DASHBOARD_BASE}/{media_id}|View full report in Reality Defender →>")
+        lines.append(
+            f"\n<{DASHBOARD_BASE}/{media_id}|View full report in Reality Defender →>"
+        )
 
     return "\n".join(lines)
 

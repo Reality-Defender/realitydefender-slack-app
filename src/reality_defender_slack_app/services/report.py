@@ -29,17 +29,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance
 
 from reality_defender_slack_app.services.formatting import (
-    ANALYZING,
-    AUTHENTIC,
     DASHBOARD_BASE,
-    DOWNLOAD_FAILED,
-    DOWNLOADING,
-    FAKE,
-    MANIPULATED,
-    NOT_APPLICABLE,
-    SUSPICIOUS,
-    UNABLE_TO_EVALUATE,
-    UNKNOWN,
+    MediaOverallStatus,
     is_context_model,
     is_ensemble_model,
     verdict_basis,
@@ -49,23 +40,23 @@ logger = logging.getLogger(__name__)
 
 TEMPLATE = "report.html.j2"
 
-STATUS_LABELS = {
-    FAKE: "Manipulated",
-    MANIPULATED: "Manipulated",
-    SUSPICIOUS: "Suspicious",
-    AUTHENTIC: "Authentic",
-    NOT_APPLICABLE: "Not Applicable",
-    UNABLE_TO_EVALUATE: "Unable to Evaluate",
-    ANALYZING: "Analyzing",
-    DOWNLOADING: "Downloading",
-    DOWNLOAD_FAILED: "Download Failed",
+STATUS_LABELS: dict[str, str] = {
+    MediaOverallStatus.FAKE: "Manipulated",
+    MediaOverallStatus.MANIPULATED: "Manipulated",
+    MediaOverallStatus.SUSPICIOUS: "Suspicious",
+    MediaOverallStatus.AUTHENTIC: "Authentic",
+    MediaOverallStatus.NOT_APPLICABLE: "Not Applicable",
+    MediaOverallStatus.UNABLE_TO_EVALUATE: "Unable to Evaluate",
+    MediaOverallStatus.ANALYZING: "Analyzing",
+    MediaOverallStatus.DOWNLOADING: "Downloading",
+    MediaOverallStatus.DOWNLOAD_FAILED: "Download Failed",
 }
 # Visual tone per status; maps to the report's colors.
-STATUS_TONES = {
-    FAKE: "danger",
-    MANIPULATED: "danger",
-    SUSPICIOUS: "warning",
-    AUTHENTIC: "ok",
+STATUS_TONES: dict[str, str] = {
+    MediaOverallStatus.FAKE: "danger",
+    MediaOverallStatus.MANIPULATED: "danger",
+    MediaOverallStatus.SUSPICIOUS: "warning",
+    MediaOverallStatus.AUTHENTIC: "ok",
 }
 CONCLUSIVE_STATUSES = frozenset(STATUS_TONES)
 
@@ -350,14 +341,18 @@ def fmt_time(value: Any) -> str | None:
 def overall_status(raw: dict[str, Any]) -> str:
     """The scan's verdict: resultsSummary.status, else overallStatus."""
     summary_block = raw.get("resultsSummary") or {}
-    return str(summary_block.get("status") or raw.get("overallStatus") or UNKNOWN)
+    return str(
+        summary_block.get("status")
+        or raw.get("overallStatus")
+        or MediaOverallStatus.UNKNOWN
+    )
 
 
 def model_state(status: str) -> str:
     """Individual model outcome: FAKE -> detected, SUSPICIOUS -> suspicious."""
-    if status in (FAKE, MANIPULATED):
+    if status in (MediaOverallStatus.FAKE, MediaOverallStatus.MANIPULATED):
         return "detected"
-    if status == SUSPICIOUS:
+    if status == MediaOverallStatus.SUSPICIOUS:
         return "suspicious"
     return "not_detected"
 
@@ -379,7 +374,7 @@ def _detectors(models: list[dict[str, Any]]) -> list[Detector]:
     """Models that reached a verdict, strongest signal first."""
     rows = []
     for model in models:
-        status = str(model.get("status") or UNKNOWN)
+        status = str(model.get("status") or MediaOverallStatus.UNKNOWN)
         if status not in CONCLUSIVE_STATUSES:
             continue
         score = _as_score(model.get("finalScore"))
@@ -440,7 +435,7 @@ def _metadata(aggregation: dict[str, Any] | None) -> Metadata | None:
 def _conclusion_label(status: str) -> str:
     if status in CONCLUSIVE_STATUSES:
         return STATUS_LABELS[status]
-    if status == UNABLE_TO_EVALUATE:
+    if status == MediaOverallStatus.UNABLE_TO_EVALUATE:
         return "Unable to evaluate"
     return "Inconclusive"
 
@@ -491,23 +486,23 @@ def _summary(
     status: str, noun: str, score: int | None, summary_block: dict[str, Any]
 ) -> str:
     """One plain-language sentence a reporter can act on."""
-    if status in (FAKE, MANIPULATED):
+    if status in (MediaOverallStatus.FAKE, MediaOverallStatus.MANIPULATED):
         strength = "strong signs" if (score or 0) >= 90 else "signs"
         return (
             f"Our analysis found {strength} that this {noun} was created or "
             "altered using AI."
         )
-    if status == SUSPICIOUS:
+    if status == MediaOverallStatus.SUSPICIOUS:
         return (
             f"Our analysis found some signs that this {noun} may have been altered "
             "using AI, but the result isn't conclusive."
         )
-    if status == AUTHENTIC:
+    if status == MediaOverallStatus.AUTHENTIC:
         return (
             f"Our analysis found no signs that this {noun} was created or altered "
             "using AI."
         )
-    if status == NOT_APPLICABLE:
+    if status == MediaOverallStatus.NOT_APPLICABLE:
         reasons = []
         for reason in (summary_block.get("metadata") or {}).get("reasons") or []:
             if isinstance(reason, dict):
@@ -521,9 +516,9 @@ def _summary(
         if reasons:
             return f"We couldn't check this {noun}: {'; '.join(reasons)}."
         return f"We couldn't check this {noun}."
-    if status == DOWNLOAD_FAILED:
+    if status == MediaOverallStatus.DOWNLOAD_FAILED:
         return "We couldn't download the media from this link."
-    if status == UNABLE_TO_EVALUATE:
+    if status == MediaOverallStatus.UNABLE_TO_EVALUATE:
         return (
             f"We couldn't finish checking this {noun} because of a technical "
             "problem on our side."
@@ -667,7 +662,7 @@ def usable_heatmap_urls(raw: dict[str, Any]) -> list[str]:
     flagged = {
         m.get("name")
         for m in raw.get("models") or []
-        if m.get("status") == FAKE
+        if m.get("status") == MediaOverallStatus.FAKE
         and "ensemble" not in str(m.get("name", ""))
         and not str(m.get("name", "")).startswith("rd-context-")
     }
