@@ -54,19 +54,4 @@ async def test_analyze_file_bytes_returns_media_id() -> None:
 
     assert analysis.result["status"] == "AUTHENTIC"
     assert analysis.media_id == "media-file"
-    # Uploaded under the user's (sanitized) filename, not a random temp name.
-    assert _FakeRD.uploaded_name == "_1_.png"
-
-
-@pytest.mark.parametrize(
-    ("filename", "expected"),
-    [
-        ("a" * 130 + ".mp4", "a" * 120 + ".mp4"),
-        (".png", "media.png"),
-        ("clip", "clip"),
-        ("my pic/../(1).png", "_1_.png"),
-    ],
-)
-def test_safe_filename_keeps_extension(filename: str, expected: str) -> None:
-    assert rd_mod._safe_filename(filename) == expected
-
+    assert _FakeRD.uploaded_name.endswith(".png")

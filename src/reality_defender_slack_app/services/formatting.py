@@ -5,18 +5,31 @@ from typing import Any
 
 DASHBOARD_BASE = "https://app.realitydefender.ai/media"
 
-# Raw media records say FAKE; the SDK's DetectionResult renames it MANIPULATED.
-FLAGGED_STATUSES = frozenset({"FAKE", "MANIPULATED", "SUSPICIOUS"})
+# Statuses RD reports for a scan and for each model. Raw media records say FAKE;
+# the SDK's DetectionResult renames it MANIPULATED.
+FAKE = "FAKE"
+MANIPULATED = "MANIPULATED"
+SUSPICIOUS = "SUSPICIOUS"
+AUTHENTIC = "AUTHENTIC"
+NOT_APPLICABLE = "NOT_APPLICABLE"
+UNABLE_TO_EVALUATE = "UNABLE_TO_EVALUATE"
+ANALYZING = "ANALYZING"
+DOWNLOADING = "DOWNLOADING"
+DOWNLOAD_FAILED = "DOWNLOAD_FAILED"
+# Ours, not RD's: used when a result carries no status at all.
+UNKNOWN = "UNKNOWN"
+
+FLAGGED_STATUSES = frozenset({FAKE, MANIPULATED, SUSPICIOUS})
 
 STATUS_EMOJI = {
-    "AUTHENTIC": ":white_check_mark:",
-    "MANIPULATED": ":warning:",
-    "UNKNOWN": ":grey_question:",
+    AUTHENTIC: ":white_check_mark:",
+    MANIPULATED: ":warning:",
+    UNKNOWN: ":grey_question:",
 }
 
 
 def format_result(result: Mapping[str, Any], label: str, media_id: str | None = None) -> str:
-    status = result.get("status", "UNKNOWN")
+    status = result.get("status", UNKNOWN)
     score = result.get("score")
     emoji = STATUS_EMOJI.get(status, ":grey_question:")
 

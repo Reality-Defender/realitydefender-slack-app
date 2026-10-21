@@ -99,7 +99,7 @@ def test_cover_facts_and_filename() -> None:
         "Slack",
     ]
     assert r.dashboard_url == "https://app.realitydefender.ai/media/m-1"
-    assert report.report_filename(r) == "RD-Report_photo_2026-09-27_4d79ae19.pdf"
+    assert report.report_filename(r) == "RD-Report_2026-09-27_4d79ae19.pdf"
 
 
 def test_metadata_signals_from_aggregation() -> None:

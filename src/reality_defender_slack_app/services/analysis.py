@@ -162,7 +162,7 @@ async def _lookup(call: Awaitable[Any] | None) -> Any:
     try:
         return await call
     except Exception:
-        logger.debug("Slack lookup failed", exc_info=True)
+        logger.warning("Slack lookup failed", exc_info=True)
         return None
 
 

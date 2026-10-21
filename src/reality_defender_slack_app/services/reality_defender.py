@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import re
+import os
 import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -63,19 +63,6 @@ async def _fetch_raw(rd: RealityDefender, request_id: str) -> dict[str, Any] | N
     return raw if isinstance(raw, dict) else None
 
 
-def _safe_filename(filename: str) -> str:
-    """Keep the user's filename (RD records it) but make it filesystem-safe.
-
-    Only the stem is trimmed, so the extension the SDK checks survives.
-    """
-    name = re.sub(r"[^\w.\- ]+", "_", Path(filename).name).strip(" ")
-    stem, dot, ext = name.rpartition(".")
-    if not dot:
-        stem, ext = ext, ""
-    stem = stem.strip(" .")[:120] or "media"
-    return f"{stem}.{ext}" if ext else stem
-
-
 class RDClient:
     """Wraps the Reality Defender SDK. The API key is passed per call so a single
     instance can serve many workspaces, each with its own key."""
@@ -96,17 +83,15 @@ class RDClient:
     async def analyze_file_bytes(
         self, api_key: str, file_bytes: bytes, filename: str
     ) -> Analysis:
-        # Upload under the original name (in a private temp dir) so RD's record,
-        # dashboard and report show the real filename, not a random temp name.
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir) / _safe_filename(filename)
-            if not tmp_path.suffix:
-                tmp_path = tmp_path.with_suffix(".bin")
-            tmp_path.write_bytes(file_bytes)
+        suffix = Path(filename).suffix or ".bin"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            f.write(file_bytes)
+            tmp_path = f.name
+        try:
             logger.info("Submitting file: %s (%d bytes)", filename, len(file_bytes))
             async with _rd_session(api_key) as rd:
                 # Two-step instead of detect_file() so we can capture media_id
-                upload = await rd.upload(file_path=str(tmp_path))
+                upload = await rd.upload(file_path=tmp_path)
                 result = await rd.get_result(
                     upload["request_id"],
                     max_attempts=MAX_POLL_ATTEMPTS,
@@ -114,3 +99,5 @@ class RDClient:
                 )
                 raw = await _fetch_raw(rd, upload["request_id"])
                 return Analysis(result, upload["request_id"], upload.get("media_id"), raw)
+        finally:
+            os.unlink(tmp_path)
