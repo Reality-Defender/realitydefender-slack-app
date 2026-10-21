@@ -38,6 +38,11 @@ def test_collect_media_includes_image_block() -> None:
     assert media.collect_media(message) == [("img1", "image")]
 
 
+def test_extract_social_url_unescapes() -> None:
+    text = "<https://www.youtube.com/watch?v=abc&amp;t=10>"
+    assert media.extract_social_url(text) == "https://www.youtube.com/watch?v=abc&t=10"
+
+
 def test_collect_media_empty_message() -> None:
     assert media.collect_media({}) == []
 

@@ -16,6 +16,8 @@ helping organizations protect against disinformation and maintain trust in their
 - **Real-time Analysis**: Analyze media files directly from Slack messages using the right-click context menu
 - **Multiple File Formats**: Supports JPG, JPEG, PNG, and MP4 files, among others.
 - **Asynchronous Processing**: Non-blocking analysis that allows continued Slack usage while processing
+- **PDF reports**: Each result is followed by a shareable PDF report in the thread (model breakdown, detection
+  heatmap, context and metadata analysis, reverse image search matches). See [PDF reports](#pdf-reports)
 
 ## Architecture
 
@@ -26,6 +28,7 @@ The application is built with:
 - **Slack Bolt**: Official Slack SDK for Python (async), multi-workspace OAuth
 - **Reality Defender SDK**: Integration with Reality Defender's detection API
 - **Pydantic**: Configuration management and data validation
+- **WeasyPrint + Jinja2**: PDF report rendering from an HTML template
 - **Docker**: Containerized deployment for easy scaling
 - **UV**: Package and project management
 
@@ -50,6 +53,8 @@ The application is built with:
    ```bash
    uv sync
    ```
+   PDF reports are rendered with WeasyPrint, which needs Pango (`brew install pango` on macOS; on
+   Apple Silicon also `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`). The Docker image installs it.
 
 3. **Set up environment variables**:
    ```bash
@@ -98,3 +103,24 @@ Defender keys in DynamoDB, with the RD keys encrypted via AWS KMS. Set the
 - Register your Reality Defender API key with the `/setup-rd <your key>` command.
 - Mention the bot with a supported social media link or an attached file, e.g. `@Reality Defender https://x.com/...` or `@Reality Defender` with a file attached.
 - Alternatively, click `More options` on any message containing supported media, then click `Analyze media`.
+- Open the PDF report posted under each result for the full breakdown.
+
+## PDF reports
+
+After each result, the bot uploads a PDF report to the same thread, named like
+`RD-Report_<media-name>_<date>_<request-id>.pdf`. It follows the Reality Defender web app's analysis report:
+
+- **Cover**: the conclusion (Manipulated / Suspicious / Authentic / ...), a media preview, and file details:
+  workspace, file name or link, requester, timestamps, request ID, SHA-256 hash, and a link to the original Slack
+  message
+- **Analysis models**: each detection model's score and technique, with a heatmap overlay when one is available
+- **Context analysis**: reverse image search matches found online
+- **Metadata analysis**: provenance signals, EXIF tags, and C2PA indicators
+- **Known limitations**, plus a link to the full analysis in the Reality Defender web app
+
+The report is built from the full Reality Defender media record (`services/report.py`) and rendered from
+`services/report.html.j2`. If it can't be built or uploaded (for example, Pango is missing), the error is logged
+and the result message is still posted on its own.
+
+Uploading the PDF report needs the `files:write` scope and the requester's name needs `users:read`; workspaces
+installed before these were added must reinstall the app to get reports.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -54,6 +55,9 @@ _MIMETYPE_EXTENSIONS = {
     "audio/ogg": "ogg",
 }
 
+# The bot token is only ever sent to Slack's private file host.
+SLACK_FILE_HOST = "files.slack.com"
+
 # Slack file downloads can be large; cap how long we wait on the transfer.
 DOWNLOAD_TIMEOUT_SECONDS = 60
 
@@ -71,10 +75,15 @@ def is_social_url(url: str) -> bool:
     return any(domain == d or domain.endswith("." + d) for d in SOCIAL_MEDIA_DOMAINS)
 
 
+def clean_social_url(url: str) -> str:
+    """Undo Slack's HTML escaping (`&amp;` -> `&`) so multi-parameter links survive."""
+    return html.unescape(url)
+
+
 def extract_social_url(text: str) -> str | None:
     """Return the first supported social media URL in Slack-formatted text."""
     for raw in _SLACK_LINK_RE.findall(text):
-        url = str(raw)
+        url = clean_social_url(str(raw))
         if is_social_url(url):
             return url
     return None
@@ -106,7 +115,11 @@ def collect_media(message: dict[str, Any]) -> list[tuple[str, str]]:
 async def download_slack_file(url: str, bot_token: str) -> bytes:
     """Download a Slack private file using the workspace's bot token."""
     timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT_SECONDS)
-    headers = {"Authorization": f"Bearer {bot_token}"}
+    headers = (
+        {"Authorization": f"Bearer {bot_token}"}
+        if urlparse(url).hostname == SLACK_FILE_HOST
+        else {}
+    )
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url, headers=headers) as resp:
             resp.raise_for_status()

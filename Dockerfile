@@ -1,6 +1,12 @@
 # syntax=docker/dockerfile:1
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
+# Pango/HarfBuzz for WeasyPrint (PDF reports); fontconfig pulls in a system font.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 \
+ && rm -rf /var/lib/apt/lists/*
+
 # Run as a non-root user in the final image.
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot

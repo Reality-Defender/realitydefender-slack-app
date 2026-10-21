@@ -29,6 +29,8 @@ BOT_SCOPES = [
     "app_mentions:read",
     "links:read",
     "remote_files:read",
+    "files:write",  # upload the PDF report into the result thread
+    "users:read",  # requester's name on the PDF report
 ]
 
 

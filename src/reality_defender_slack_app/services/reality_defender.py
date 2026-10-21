@@ -6,8 +6,10 @@ import os
 import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any, NamedTuple
 
 from realitydefender import RealityDefender
+from realitydefender.detection.results import get_media_result
 from realitydefender.model import DetectionResult
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,20 @@ logger = logging.getLogger(__name__)
 # (or the current result once max attempts is hit). 150 attempts at 2s ~= 5 min.
 POLLING_INTERVAL_MS = 2000
 MAX_POLL_ATTEMPTS = 150
+
+
+class Analysis(NamedTuple):
+    """Outcome of one scan.
+
+    `result` is the SDK's trimmed DetectionResult (status, score, models). `raw`
+    is the full media record (per-model data, file metadata, signed evidence
+    URLs) used to build the PDF report; None if that follow-up fetch failed.
+    """
+
+    result: DetectionResult
+    request_id: str
+    media_id: str | None
+    raw: dict[str, Any] | None
 
 
 @contextlib.asynccontextmanager
@@ -33,12 +49,26 @@ async def _rd_session(api_key: str) -> AsyncIterator[RealityDefender]:
             logger.warning("Reality Defender session cleanup failed", exc_info=True)
 
 
+async def _fetch_raw(rd: RealityDefender, request_id: str) -> dict[str, Any] | None:
+    """Fetch the full media record once polling has finished.
+
+    get_result() already waited for a verdict, so this is a single request. A
+    failure here only costs the report, never the result.
+    """
+    try:
+        raw = await get_media_result(rd.client, request_id)
+    except Exception:
+        logger.warning("Could not fetch full result for %s", request_id, exc_info=True)
+        return None
+    return raw if isinstance(raw, dict) else None
+
+
 class RDClient:
     """Wraps the Reality Defender SDK. The API key is passed per call so a single
     instance can serve many workspaces, each with its own key."""
 
-    async def analyze_url(self, api_key: str, url: str) -> tuple[DetectionResult, str | None]:
-        """Returns (result, media_id). media_id is None for social media submissions."""
+    async def analyze_url(self, api_key: str, url: str) -> Analysis:
+        """media_id is None for social media submissions."""
         async with _rd_session(api_key) as rd:
             logger.info("Submitting social media URL: %s", url)
             upload = await rd.upload_social_media(social_media_link=url)
@@ -47,12 +77,12 @@ class RDClient:
                 max_attempts=MAX_POLL_ATTEMPTS,
                 polling_interval=POLLING_INTERVAL_MS,
             )
-            return result, upload.get("media_id")
+            raw = await _fetch_raw(rd, upload["request_id"])
+            return Analysis(result, upload["request_id"], upload.get("media_id"), raw)
 
     async def analyze_file_bytes(
         self, api_key: str, file_bytes: bytes, filename: str
-    ) -> tuple[DetectionResult, str | None]:
-        """Returns (result, media_id)."""
+    ) -> Analysis:
         suffix = Path(filename).suffix or ".bin"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
             f.write(file_bytes)
@@ -67,6 +97,7 @@ class RDClient:
                     max_attempts=MAX_POLL_ATTEMPTS,
                     polling_interval=POLLING_INTERVAL_MS,
                 )
-                return result, upload.get("media_id")
+                raw = await _fetch_raw(rd, upload["request_id"])
+                return Analysis(result, upload["request_id"], upload.get("media_id"), raw)
         finally:
             os.unlink(tmp_path)
