@@ -53,6 +53,13 @@ def test_model_tables_group_and_name_techniques() -> None:
     assert r.conclusion_text.startswith("There's a 4% likelihood that this image")
 
 
+def test_audio_models_get_their_own_table() -> None:
+    raw = _raw(**{"rd-elm-vid": "AUTHENTIC", "rd-ash-aud": "FAKE"})
+    r = report.build_report(raw, _ctx(), generated_at=NOW)
+
+    assert [t.title for t in r.model_tables] == ["Face models", "Audio models"]
+
+
 def test_context_only_verdict_hides_the_score() -> None:
     raw = _raw("FAKE", **{"rd-elm-img": "AUTHENTIC", "rd-context-img": "FAKE"})
     raw["models"][1]["data"] = {
