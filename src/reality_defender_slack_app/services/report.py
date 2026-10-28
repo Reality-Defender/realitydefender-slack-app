@@ -594,7 +594,7 @@ def _model_tables(detectors: list[Detector]) -> list[ModelTable]:
     if audio:
         tables.append(
             ModelTable(
-                "Detection models",
+                "Audio models",
                 "AI models that listen for signs of synthetic or cloned speech.",
                 audio,
             )
@@ -602,7 +602,7 @@ def _model_tables(detectors: list[Detector]) -> list[ModelTable]:
     if text:
         tables.append(
             ModelTable(
-                "Detection models",
+                "Text models",
                 "AI models that look for signs the text was written by AI.",
                 text,
             )
