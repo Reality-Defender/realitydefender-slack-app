@@ -42,7 +42,7 @@ async def analyze_url_and_post(
     analysis = None
     try:
         analysis = await rd_client.analyze_url(api_key, url)
-        reply = format_result(analysis.result, url, media_id=analysis.media_id)
+        reply = format_result(analysis.result, url)
     except RealityDefenderError as e:
         logger.error("RD API error analyzing %s: %s (%s)", url, e.message, e.code)
         reply = f":x: Analysis failed: {e.message} (`{e.code}`)"
@@ -102,7 +102,7 @@ async def analyze_slack_file_and_post(
     analysis = None
     try:
         analysis = await rd_client.analyze_file_bytes(api_key, content, name)
-        reply = format_result(analysis.result, name, media_id=analysis.media_id)
+        reply = format_result(analysis.result, name)
     except RealityDefenderError as e:
         logger.error("RD error on file %s: %s (%s)", name, e.message, e.code)
         reply = f":x: Analysis failed: {e.message}"
